@@ -26,6 +26,68 @@ from printfleet2.services.auth_service import hash_password, verify_password
 bp = Blueprint("web", __name__)
 
 
+def normalize_layout(layout: str | None) -> str:
+    if not layout:
+        return "standard"
+    layout = layout.strip().lower().replace(" ", "-")
+    if layout in {"standard", "grid", "focus"}:
+        return layout
+    return "standard"
+
+
+def stream_type_for_url(url: str) -> str:
+    lower = url.split("?", 1)[0].lower()
+    if lower.endswith((".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg")):
+        return "image"
+    if "mjpeg" in lower or "mjpg" in lower:
+        return "image"
+    return "iframe"
+
+
+def build_live_wall_config(settings: dict) -> dict:
+    streams: list[dict] = []
+
+    def add_stream(url: str | None, label: str) -> None:
+        if not url:
+            return
+        url = url.strip()
+        if not url:
+            return
+        streams.append(
+            {
+                "label": label,
+                "url": url,
+                "type": stream_type_for_url(url),
+            }
+        )
+
+    add_stream(settings.get("kiosk_stream_url"), "Main stream")
+    add_stream(settings.get("kiosk_stream_url_1"), "Stream 1")
+    add_stream(settings.get("kiosk_stream_url_2"), "Stream 2")
+    add_stream(settings.get("kiosk_stream_url_3"), "Stream 3")
+    add_stream(settings.get("kiosk_stream_url_4"), "Stream 4")
+
+    return {
+        "layout": normalize_layout(settings.get("kiosk_stream_layout")),
+        "streams": streams,
+    }
+
+
+def build_live_wall_printers(printers) -> list[dict]:
+    active_printers = []
+    for printer in printers:
+        if not printer.enabled:
+            continue
+        active_printers.append(
+            {
+                "name": printer.name,
+                "location": printer.location,
+                "type": printer.printer_type,
+            }
+        )
+    return active_printers
+
+
 def clean_optional(value: object | None) -> str | None:
     if value is None:
         return None
@@ -298,6 +360,21 @@ def users_page():
 @bp.get("/settings")
 def settings_page():
     return render_template("settings.html")
+
+
+@bp.get("/live-wall")
+def live_wall_page():
+    with session_scope() as db_session:
+        settings = ensure_settings_row(db_session)
+        settings_data = settings_to_dict(settings)
+        printers = list_printers(db_session)
+        active_printers = build_live_wall_printers(printers)
+    config = build_live_wall_config(settings_data)
+    return render_template(
+        "live_wall.html",
+        live_wall=config,
+        active_printers=active_printers,
+    )
 
 
 @bp.get("/login")

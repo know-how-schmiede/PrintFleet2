@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}PrintFleet Live-Wall{% endblock %}
+
+{% block content %}
+  <section class="container live-wall">
+    <div class="live-wall-hero">
+      <div>
+        <p class="eyebrow">Live-Wall</p>
+        <h1 class="live-wall-title">PrintFleet Live-Wall</h1>
+        <p class="lead">Live impressions, live energy, live production.</p>
+      </div>
+      <div class="live-wall-meta">
+        <span class="live-wall-chip">Layout: {{ live_wall.layout }}</span>
+        <span class="live-wall-chip">{{ live_wall.streams | length }} streams</span>
+      </div>
+    </div>
+
+    {% if live_wall.streams %}
+      <div class="live-wall-grid layout-{{ live_wall.layout }}">
+        {% for stream in live_wall.streams %}
+          <article class="live-wall-tile">
+            <div class="live-wall-frame">
+              {% if stream.type == "image" %}
+                <img src="{{ stream.url }}" alt="{{ stream.label }}">
+              {% else %}
+                <iframe src="{{ stream.url }}" title="{{ stream.label }}" loading="lazy" allowfullscreen></iframe>
+              {% endif %}
+            </div>
+            <div class="live-wall-caption">
+              <span>{{ stream.label }}</span>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card live-wall-empty">
+        <h3>No streams configured</h3>
+        <p class="muted">Add stream URLs in Settings to start the Live-Wall.</p>
+        <a class="btn soft" href="/settings">Open Settings</a>
+      </div>
+    {% endif %}
+
+    <div class="card live-wall-printers">
+      <div class="table-header">
+        <h3>Active printers</h3>
+        <span class="muted">{{ active_printers | length }} active</span>
+      </div>
+      {% if active_printers %}
+        <div class="live-wall-printer-grid">
+          {% for printer in active_printers %}
+            <div class="live-wall-printer">
+              <strong>{{ printer.name }}</strong>
+              {% if printer.location or printer.type %}
+                <span class="muted">
+                  {{ printer.location or "Location n/a" }}{% if printer.type %} · {{ printer.type }}{% endif %}
+                </span>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="muted">No active printers configured.</p>
+      {% endif %}
+    </div>
+  </section>
+{% endblock %}

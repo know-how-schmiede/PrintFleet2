@@ -18,12 +18,15 @@
         </div>
         <nav class="nav-links">
           <a href="/">Home</a>
-          <a href="/printers">Printers</a>
-          <a href="/users">Users</a>
-          <a href="/settings">Settings</a>
-          <a href="/docs">Docs</a>
-          <a href="/api/docs" class="ghost">API JSON</a>
-          <a href="/login" id="authLink" class="ghost">Login</a>
+          {% if request.path != "/live-wall" %}
+            <a href="/live-wall">Live-Wall</a>
+            <a href="/printers">Printers</a>
+            <a href="/users">Users</a>
+            <a href="/settings">Settings</a>
+            <a href="/docs">Docs</a>
+            <a href="/api/docs" class="ghost">API JSON</a>
+            <a href="/login" id="authLink" class="ghost">Login</a>
+          {% endif %}
         </nav>
       </div>
     </header>

@@ -386,6 +386,108 @@ label.checkbox input {
   margin-bottom: 8px;
 }
 
+.live-wall {
+  display: grid;
+  gap: 24px;
+}
+
+.live-wall-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.live-wall-title {
+  font-size: clamp(2.4rem, 4vw, 3.6rem);
+  margin: 8px 0 12px;
+}
+
+.live-wall-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.live-wall-chip {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.live-wall-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.live-wall-grid.layout-standard .live-wall-tile:first-child,
+.live-wall-grid.layout-focus .live-wall-tile:first-child {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+.live-wall-tile {
+  background: var(--surface);
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.08);
+  display: grid;
+}
+
+.live-wall-frame {
+  position: relative;
+  background: #0b1120;
+  aspect-ratio: 16 / 9;
+}
+
+.live-wall-frame iframe,
+.live-wall-frame img {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  object-fit: cover;
+}
+
+.live-wall-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  font-weight: 600;
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.live-wall-empty {
+  text-align: center;
+}
+
+.live-wall-printers {
+  display: grid;
+  gap: 12px;
+}
+
+.live-wall-printer-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.live-wall-printer {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(15, 23, 42, 0.03);
+  display: grid;
+  gap: 6px;
+}
+
 .stack {
   display: grid;
   gap: 8px;
@@ -428,5 +530,11 @@ label.checkbox input {
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
+  }
+
+  .live-wall-grid.layout-standard .live-wall-tile:first-child,
+  .live-wall-grid.layout-focus .live-wall-tile:first-child {
+    grid-column: span 1;
+    grid-row: span 1;
   }
 }
