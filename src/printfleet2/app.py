@@ -5,6 +5,7 @@ from printfleet2.db.session import init_engine, session_scope
 from printfleet2.services.settings_service import ensure_settings_row
 from printfleet2.web.routes import bp as web_bp
 from printfleet2.services.user_service import get_user, has_users
+from printfleet2.version import VERSION
 
 
 def create_app() -> Flask:
@@ -62,6 +63,10 @@ def create_app() -> Flask:
         if request.path.startswith("/api/"):
             return jsonify({"error": "not_authenticated"}), 401
         return redirect(url_for("web.login_page"))
+
+    @app.context_processor
+    def inject_version():
+        return {"app_version": VERSION}
     app.register_blueprint(web_bp)
 
     return app

@@ -159,6 +159,21 @@ body {
   color: var(--accent);
 }
 
+.btn.danger {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+.btn.danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .hero-card {
   background: var(--surface);
   border-radius: 18px;
@@ -258,6 +273,20 @@ select {
   border: 1px solid var(--border);
   font: inherit;
   background: #fff;
+}
+
+textarea {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font: inherit;
+  background: #fff;
+  resize: vertical;
+  min-height: 110px;
+}
+
+.form-grid .full {
+  grid-column: 1 / -1;
 }
 
 label.checkbox {

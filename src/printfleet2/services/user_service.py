@@ -32,8 +32,25 @@ def get_user_by_username(session: Session, username: str) -> User | None:
     return session.query(User).filter(User.username == username).one_or_none()
 
 
-def create_user(session: Session, username: str, password_hash: str, role: str = "user") -> User:
-    user = User(username=username, password_hash=password_hash, role=role)
+def create_user(
+    session: Session,
+    username: str,
+    password_hash: str,
+    role: str = "user",
+    first_name: str | None = None,
+    last_name: str | None = None,
+    email: str | None = None,
+    notes: str | None = None,
+) -> User:
+    user = User(
+        username=username,
+        password_hash=password_hash,
+        role=role,
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        notes=notes,
+    )
     session.add(user)
     return user
 
@@ -43,5 +60,9 @@ def user_to_dict(user: User) -> dict:
         "id": user.id,
         "username": user.username,
         "role": user.role,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "email": user.email,
+        "notes": user.notes,
         "created_at": user.created_at,
     }

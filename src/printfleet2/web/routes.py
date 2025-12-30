@@ -26,6 +26,16 @@ from printfleet2.services.auth_service import hash_password, verify_password
 bp = Blueprint("web", __name__)
 
 
+def clean_optional(value: object | None) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        value = value.strip()
+    else:
+        value = str(value).strip()
+    return value or None
+
+
 @bp.get("/")
 def index():
     return render_template("index.html")
@@ -118,6 +128,10 @@ def post_user():
     username = (payload.get("username") or "").strip()
     password = payload.get("password") or ""
     role = normalize_role(payload.get("role"))
+    first_name = clean_optional(payload.get("first_name"))
+    last_name = clean_optional(payload.get("last_name"))
+    email = clean_optional(payload.get("email"))
+    notes = clean_optional(payload.get("notes"))
     if not username or not password:
         return {"error": "missing_field"}, 400
     if payload.get("role") is not None and role is None:
@@ -131,7 +145,16 @@ def post_user():
             role = "superadmin"
         if role is None:
             role = "user"
-        user = create_user(db_session, username, hash_password(password), role=role)
+        user = create_user(
+            db_session,
+            username,
+            hash_password(password),
+            role=role,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            notes=notes,
+        )
         return user_to_dict(user), 201
 
 
@@ -141,6 +164,55 @@ def get_user_by_id(user_id: int):
         user = get_user(db_session, user_id)
         if user is None:
             return {"error": "not_found"}, 404
+        return user_to_dict(user)
+
+
+@bp.delete("/api/users/<int:user_id>")
+def delete_user_by_id(user_id: int):
+    with session_scope() as db_session:
+        user = get_user(db_session, user_id)
+        if user is None:
+            return {"error": "not_found"}, 404
+        if user.role == "superadmin":
+            return {"error": "forbidden"}, 403
+        db_session.delete(user)
+        return {"status": "deleted"}
+
+
+@bp.put("/api/users/<int:user_id>")
+@bp.patch("/api/users/<int:user_id>")
+def update_user_by_id(user_id: int):
+    payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return {"error": "invalid_json"}, 400
+    new_username = clean_optional(payload.get("username"))
+    if "username" in payload and new_username is None:
+        return {"error": "missing_field", "field": "username"}, 400
+    role = normalize_role(payload.get("role"))
+    if payload.get("role") is not None and role is None:
+        return {"error": "invalid_role"}, 400
+    with session_scope() as db_session:
+        user = get_user(db_session, user_id)
+        if user is None:
+            return {"error": "not_found"}, 404
+        if new_username is not None and new_username != user.username:
+            existing = get_user_by_username(db_session, new_username)
+            if existing is not None and existing.id != user.id:
+                return {"error": "username_exists"}, 409
+            user.username = new_username
+        if "role" in payload and role:
+            user.role = role
+        if "first_name" in payload:
+            user.first_name = clean_optional(payload.get("first_name"))
+        if "last_name" in payload:
+            user.last_name = clean_optional(payload.get("last_name"))
+        if "email" in payload:
+            user.email = clean_optional(payload.get("email"))
+        if "notes" in payload:
+            user.notes = clean_optional(payload.get("notes"))
+        password = payload.get("password") or ""
+        if password:
+            user.password_hash = hash_password(password)
         return user_to_dict(user)
 
 
@@ -196,6 +268,9 @@ def api_docs():
             {"method": "GET", "path": "/api/users"},
             {"method": "POST", "path": "/api/users"},
             {"method": "GET", "path": "/api/users/{id}"},
+            {"method": "DELETE", "path": "/api/users/{id}"},
+            {"method": "PUT", "path": "/api/users/{id}"},
+            {"method": "PATCH", "path": "/api/users/{id}"},
             {"method": "POST", "path": "/api/auth/login"},
             {"method": "POST", "path": "/api/auth/logout"},
             {"method": "GET", "path": "/api/auth/me"},
