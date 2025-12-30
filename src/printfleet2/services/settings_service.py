@@ -11,6 +11,7 @@ def ensure_settings_row(session: Session) -> Settings:
             poll_interval=5.0,
             db_reload_interval=30.0,
             language="en",
+            theme="lightTheme",
             kiosk_stream_layout="standard",
         )
         session.add(settings)
@@ -24,6 +25,7 @@ def settings_to_dict(settings: Settings) -> dict:
         "db_reload_interval": settings.db_reload_interval,
         "telegram_chat_id": settings.telegram_chat_id,
         "language": settings.language,
+        "theme": settings.theme,
         "imprint_markdown": settings.imprint_markdown,
         "privacy_markdown": settings.privacy_markdown,
         "kiosk_stream_url": settings.kiosk_stream_url,
@@ -56,6 +58,7 @@ def update_settings(settings: Settings, data: dict) -> Settings:
         "db_reload_interval",
         "telegram_chat_id",
         "language",
+        "theme",
         "imprint_markdown",
         "privacy_markdown",
         "kiosk_stream_url",

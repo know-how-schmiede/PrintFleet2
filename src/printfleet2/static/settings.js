@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
     db_reload_interval: "settingReloadInterval",
     telegram_chat_id: "settingTelegramChatId",
     language: "settingLanguage",
+    theme: "settingTheme",
     imprint_markdown: "settingImprint",
     privacy_markdown: "settingPrivacy",
     kiosk_stream_url: "settingKioskStreamUrl",

@@ -15,6 +15,7 @@ class Settings(Base):
     db_reload_interval: Mapped[float | None] = mapped_column(Float, nullable=True)
     telegram_chat_id: Mapped[str | None] = mapped_column(String, nullable=True)
     language: Mapped[str | None] = mapped_column(String, nullable=True)
+    theme: Mapped[str | None] = mapped_column(String, nullable=True)
     imprint_markdown: Mapped[str | None] = mapped_column(Text, nullable=True)
     privacy_markdown: Mapped[str | None] = mapped_column(Text, nullable=True)
     kiosk_stream_url: Mapped[str | None] = mapped_column(String, nullable=True)

@@ -1,0 +1,10 @@
+:root {
+  --bg-1: #f7f3ea;
+  --bg-2: #f0f6ff;
+  --ink: #0f172a;
+  --muted: #6b7280;
+  --accent: #0f766e;
+  --accent-soft: rgba(15, 118, 110, 0.12);
+  --border: rgba(15, 23, 42, 0.12);
+  --surface: #ffffff;
+}

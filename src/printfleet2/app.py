@@ -2,7 +2,7 @@ from flask import Flask, g, jsonify, redirect, request, session as flask_session
 
 from printfleet2.config import load_config
 from printfleet2.db.session import init_engine, session_scope
-from printfleet2.services.settings_service import ensure_settings_row
+from printfleet2.services.settings_service import ensure_settings_row, settings_to_dict
 from printfleet2.web.routes import bp as web_bp
 from printfleet2.services.user_service import get_user, has_users
 from printfleet2.version import VERSION
@@ -67,7 +67,21 @@ def create_app() -> Flask:
 
     @app.context_processor
     def inject_version():
-        return {"app_version": VERSION}
+        theme_name = "lightTheme"
+        try:
+            with session_scope() as session:
+                settings = ensure_settings_row(session)
+                settings_data = settings_to_dict(settings)
+                candidate = settings_data.get("theme") or ""
+                if candidate in {"lightTheme", "darkTheme"}:
+                    theme_name = candidate
+        except Exception:
+            theme_name = "lightTheme"
+        return {
+            "app_version": VERSION,
+            "theme_name": theme_name,
+            "theme_css": f"themes/{theme_name}.css",
+        }
     app.register_blueprint(web_bp)
 
     return app
