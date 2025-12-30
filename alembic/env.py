@@ -13,6 +13,7 @@ from sqlalchemy import engine_from_config, pool
 
 from printfleet2.config import load_config
 from printfleet2.db.base import Base
+from printfleet2 import models  # noqa: F401
 
 # Import models here for autogenerate to see them.
 # from printfleet2 import models  # noqa: F401
