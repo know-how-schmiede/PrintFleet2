@@ -1,15 +1,23 @@
 # PrintFleet2
 
-PrintFleet2 is a clean rebuild of PrintFleet focused on a stronger foundation.
+PrintFleet2 is a clean rebuild of PrintFleet with a stronger foundation.
 The goal is to keep the current usability while making the system easier to
-extend and safer to operate as features grow.
+extend, safer to operate, and more maintainable as features grow.
 
-Planned foundations:
+Current foundations:
 - SQLAlchemy ORM and Alembic migrations
 - Clear layers (web, services, db, models)
 - Predictable configuration and runtime behavior
 
-Status: scaffolding only.
+Status: MVP in progress (users, printers, settings, Live-Wall).
+
+## Key features
+
+- Users with roles: SuperAdmin, Admin, User
+- Login required for all views except Live-Wall
+- Settings UI with Live-Wall stream configuration
+- Printer management with active list on Live-Wall
+- Versioning file and changelog in docs
 
 ## Project layout
 
@@ -18,6 +26,9 @@ PrintFleet2/
   README.md
   requirements.txt
   requirements-dev.txt
+  alembic.ini
+  alembic/
+    versions/
   setup/
     README.md
     install.sh
@@ -29,12 +40,30 @@ PrintFleet2/
       __main__.py
       app.py
       config.py
+      version.py
       db/
         __init__.py
         base.py
         session.py
       models/
         __init__.py
+        printer.py
+        settings.py
+        user.py
+      services/
+        auth_service.py
+        printer_service.py
+        settings_service.py
+        user_service.py
+      static/
+        style.css
+      templates/
+        base.html
+        live_wall.html
+        login.html
+        printers.html
+        settings.html
+        users.html
       web/
         __init__.py
         routes.py
@@ -42,11 +71,31 @@ PrintFleet2/
     README.md
   docs/
     README.md
+    Version.md
 ```
 
 ## Quick start
 
 See `setup/README.md` for clone, setup, and run commands.
+
+## Migrations
+
+Run Alembic from the repo root:
+
+```
+alembic upgrade head
+```
+
+## Access and roles
+
+- First created user becomes SuperAdmin.
+- Live-Wall is public at `/live-wall`.
+- All other routes require login.
+
+## Versioning
+
+Runtime version lives in `src/printfleet2/version.py`.
+Changes are logged in `docs/Version.md`.
 
 ## Notes
 
