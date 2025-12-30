@@ -48,3 +48,42 @@ def settings_to_dict(settings: Settings) -> dict:
         "kiosk_camera_user_4": settings.kiosk_camera_user_4,
         "kiosk_camera_password_4": settings.kiosk_camera_password_4,
     }
+
+
+def update_settings(settings: Settings, data: dict) -> Settings:
+    for field in (
+        "poll_interval",
+        "db_reload_interval",
+        "telegram_chat_id",
+        "language",
+        "imprint_markdown",
+        "privacy_markdown",
+        "kiosk_stream_url",
+        "kiosk_camera_host",
+        "kiosk_camera_user",
+        "kiosk_camera_password",
+        "kiosk_stream_layout",
+        "kiosk_stream_url_1",
+        "kiosk_camera_host_1",
+        "kiosk_camera_user_1",
+        "kiosk_camera_password_1",
+        "kiosk_stream_url_2",
+        "kiosk_camera_host_2",
+        "kiosk_camera_user_2",
+        "kiosk_camera_password_2",
+        "kiosk_stream_url_3",
+        "kiosk_camera_host_3",
+        "kiosk_camera_user_3",
+        "kiosk_camera_password_3",
+        "kiosk_stream_url_4",
+        "kiosk_camera_host_4",
+        "kiosk_camera_user_4",
+        "kiosk_camera_password_4",
+    ):
+        if field in data:
+            setattr(settings, field, data[field])
+    if "poll_interval" in data:
+        settings.poll_interval = float(settings.poll_interval) if settings.poll_interval is not None else None
+    if "db_reload_interval" in data:
+        settings.db_reload_interval = float(settings.db_reload_interval) if settings.db_reload_interval is not None else None
+    return settings

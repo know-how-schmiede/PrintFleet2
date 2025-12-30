@@ -5,6 +5,22 @@ from sqlalchemy.orm import Session
 from printfleet2.models.printer import Printer
 
 
+def _bool_value(value: object, default: bool) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return value != 0
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in ("1", "true", "yes", "on"):
+            return True
+        if lowered in ("0", "false", "no", "off"):
+            return False
+    return default
+
+
 def list_printers(session: Session) -> list[Printer]:
     return session.query(Printer).order_by(Printer.id).all()
 
@@ -19,8 +35,8 @@ def create_printer(session: Session, data: dict) -> Printer:
         backend=data["backend"],
         host=data["host"],
         port=data.get("port", 80),
-        https=bool(data.get("https", False)),
-        no_scanning=bool(data.get("no_scanning", False)),
+        https=_bool_value(data.get("https"), False),
+        no_scanning=_bool_value(data.get("no_scanning"), False),
         token=data.get("token"),
         api_key=data.get("api_key"),
         error_report_interval=float(data.get("error_report_interval", 30.0)),
@@ -29,10 +45,48 @@ def create_printer(session: Session, data: dict) -> Printer:
         location=data.get("location"),
         printer_type=data.get("printer_type"),
         notes=data.get("notes"),
-        enabled=bool(data.get("enabled", True)),
+        enabled=_bool_value(data.get("enabled"), True),
     )
     session.add(printer)
     return printer
+
+
+def update_printer(session: Session, printer: Printer, data: dict) -> Printer:
+    if "name" in data:
+        printer.name = data["name"]
+    if "backend" in data:
+        printer.backend = data["backend"]
+    if "host" in data:
+        printer.host = data["host"]
+    if "port" in data:
+        printer.port = int(data["port"])
+    if "https" in data:
+        printer.https = _bool_value(data.get("https"), printer.https)
+    if "no_scanning" in data:
+        printer.no_scanning = _bool_value(data.get("no_scanning"), printer.no_scanning)
+    if "token" in data:
+        printer.token = data["token"]
+    if "api_key" in data:
+        printer.api_key = data["api_key"]
+    if "error_report_interval" in data:
+        printer.error_report_interval = float(data["error_report_interval"])
+    if "tasmota_host" in data:
+        printer.tasmota_host = data["tasmota_host"]
+    if "tasmota_topic" in data:
+        printer.tasmota_topic = data["tasmota_topic"]
+    if "location" in data:
+        printer.location = data["location"]
+    if "printer_type" in data:
+        printer.printer_type = data["printer_type"]
+    if "notes" in data:
+        printer.notes = data["notes"]
+    if "enabled" in data:
+        printer.enabled = _bool_value(data.get("enabled"), printer.enabled)
+    return printer
+
+
+def delete_printer(session: Session, printer: Printer) -> None:
+    session.delete(printer)
 
 
 def printer_to_dict(printer: Printer) -> dict:
