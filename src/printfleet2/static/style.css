@@ -216,6 +216,11 @@ body {
   margin-top: 0;
 }
 
+.card h4 {
+  margin: 18px 0 0;
+  font-size: 1rem;
+}
+
 .list {
   list-style: none;
   padding: 0;

@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}PrintFleet2 | Settings{% endblock %}
+
+{% block content %}
+  <section class="container docs">
+    <div class="docs-hero">
+      <p class="eyebrow">Settings</p>
+      <h1>System configuration</h1>
+      <p class="lead">Manage PrintFleet2 defaults and Live-Wall sources.</p>
+    </div>
+
+    <div id="settingsNotice" class="notice"></div>
+
+    <form id="settingsForm" class="stack">
+      <div class="card stack">
+        <h3>General</h3>
+        <p class="muted">Core intervals and localization options.</p>
+        <div class="form-grid">
+          <label>
+            Language
+            <input type="text" id="settingLanguage" placeholder="en">
+          </label>
+          <label>
+            Poll interval (seconds)
+            <input type="number" id="settingPollInterval" min="0" step="0.1">
+          </label>
+          <label>
+            DB reload interval (seconds)
+            <input type="number" id="settingReloadInterval" min="0" step="0.1">
+          </label>
+          <label>
+            Telegram chat ID
+            <input type="text" id="settingTelegramChatId">
+          </label>
+        </div>
+      </div>
+
+      <div class="card stack">
+        <h3>Live-Wall</h3>
+        <p class="muted">Configure stream sources and camera credentials.</p>
+        <div class="form-grid">
+          <label>
+            Stream layout
+            <input type="text" id="settingKioskLayout" placeholder="standard">
+          </label>
+          <label>
+            Primary stream URL
+            <input type="text" id="settingKioskStreamUrl">
+          </label>
+          <label>
+            Primary camera host
+            <input type="text" id="settingKioskCameraHost">
+          </label>
+          <label>
+            Primary camera user
+            <input type="text" id="settingKioskCameraUser" autocomplete="username">
+          </label>
+          <label>
+            Primary camera password
+            <input type="password" id="settingKioskCameraPassword" autocomplete="new-password">
+          </label>
+        </div>
+
+        <h4>Stream 1</h4>
+        <div class="form-grid">
+          <label>
+            Stream URL
+            <input type="text" id="settingKioskStreamUrl1">
+          </label>
+          <label>
+            Camera host
+            <input type="text" id="settingKioskCameraHost1">
+          </label>
+          <label>
+            Camera user
+            <input type="text" id="settingKioskCameraUser1" autocomplete="username">
+          </label>
+          <label>
+            Camera password
+            <input type="password" id="settingKioskCameraPassword1" autocomplete="new-password">
+          </label>
+        </div>
+
+        <h4>Stream 2</h4>
+        <div class="form-grid">
+          <label>
+            Stream URL
+            <input type="text" id="settingKioskStreamUrl2">
+          </label>
+          <label>
+            Camera host
+            <input type="text" id="settingKioskCameraHost2">
+          </label>
+          <label>
+            Camera user
+            <input type="text" id="settingKioskCameraUser2" autocomplete="username">
+          </label>
+          <label>
+            Camera password
+            <input type="password" id="settingKioskCameraPassword2" autocomplete="new-password">
+          </label>
+        </div>
+
+        <h4>Stream 3</h4>
+        <div class="form-grid">
+          <label>
+            Stream URL
+            <input type="text" id="settingKioskStreamUrl3">
+          </label>
+          <label>
+            Camera host
+            <input type="text" id="settingKioskCameraHost3">
+          </label>
+          <label>
+            Camera user
+            <input type="text" id="settingKioskCameraUser3" autocomplete="username">
+          </label>
+          <label>
+            Camera password
+            <input type="password" id="settingKioskCameraPassword3" autocomplete="new-password">
+          </label>
+        </div>
+
+        <h4>Stream 4</h4>
+        <div class="form-grid">
+          <label>
+            Stream URL
+            <input type="text" id="settingKioskStreamUrl4">
+          </label>
+          <label>
+            Camera host
+            <input type="text" id="settingKioskCameraHost4">
+          </label>
+          <label>
+            Camera user
+            <input type="text" id="settingKioskCameraUser4" autocomplete="username">
+          </label>
+          <label>
+            Camera password
+            <input type="password" id="settingKioskCameraPassword4" autocomplete="new-password">
+          </label>
+        </div>
+      </div>
+
+      <div class="card stack">
+        <h3>Legal</h3>
+        <p class="muted">Markdown content for imprint and privacy pages.</p>
+        <div class="form-grid">
+          <label class="full">
+            Imprint markdown
+            <textarea id="settingImprint" rows="5"></textarea>
+          </label>
+          <label class="full">
+            Privacy markdown
+            <textarea id="settingPrivacy" rows="5"></textarea>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn primary" type="submit">Save settings</button>
+        <button class="btn outline" type="button" id="settingsReset">Reset</button>
+      </div>
+    </form>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='settings.js') }}" defer></script>
+{% endblock %}

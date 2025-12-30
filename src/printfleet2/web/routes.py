@@ -295,6 +295,11 @@ def users_page():
     return render_template("users.html", first_user=first_user)
 
 
+@bp.get("/settings")
+def settings_page():
+    return render_template("settings.html")
+
+
 @bp.get("/login")
 def login_page():
     with session_scope() as db_session:
