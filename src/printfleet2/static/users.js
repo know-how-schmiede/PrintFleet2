@@ -3,6 +3,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const notice = document.getElementById("userNotice");
   const resetBtn = document.getElementById("userReset");
   const refreshBtn = document.getElementById("userRefresh");
+  const roleField = document.getElementById("userRole");
+  const firstUser = form?.dataset.firstUser === "true";
 
   if (!form || !notice || !resetBtn || !refreshBtn) {
     return;
@@ -19,9 +21,22 @@ document.addEventListener("DOMContentLoaded", () => {
   function clearForm(keepNotice) {
     document.getElementById("userName").value = "";
     document.getElementById("userPassword").value = "";
+    if (roleField && roleField.tagName === "SELECT") {
+      roleField.value = "user";
+    }
     if (!keepNotice) {
       setNotice("", "");
     }
+  }
+
+  function formatRole(role) {
+    if (!role) {
+      return "User";
+    }
+    if (role === "superadmin") {
+      return "SuperAdmin";
+    }
+    return role.charAt(0).toUpperCase() + role.slice(1);
   }
 
   async function loadUsers() {
@@ -39,7 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     items.forEach((user) => {
       const row = document.createElement("tr");
-      const roleLabel = user.is_admin ? "Admin" : "User";
+      const roleLabel = formatRole(user.role);
       row.innerHTML = `
         <td>${user.id}</td>
         <td>${user.username}</td>
@@ -58,13 +73,22 @@ document.addEventListener("DOMContentLoaded", () => {
       setNotice("Username and password are required.", "error");
       return;
     }
+    const role = roleField ? roleField.value : "";
+    const payload = { username, password };
+    if (role) {
+      payload.role = role;
+    }
     const res = await fetch("/api/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify(payload),
     });
     if (res.ok) {
       setNotice("User created.", "success");
+      if (firstUser) {
+        window.location.reload();
+        return;
+      }
       clearForm(true);
       await loadUsers();
     } else {

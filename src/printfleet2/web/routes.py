@@ -17,6 +17,7 @@ from printfleet2.services.user_service import (
     get_user_by_username,
     has_users,
     list_users,
+    normalize_role,
     user_to_dict,
 )
 from printfleet2.services.auth_service import hash_password, verify_password
@@ -116,14 +117,21 @@ def post_user():
         return {"error": "invalid_json"}, 400
     username = (payload.get("username") or "").strip()
     password = payload.get("password") or ""
+    role = normalize_role(payload.get("role"))
     if not username or not password:
         return {"error": "missing_field"}, 400
+    if payload.get("role") is not None and role is None:
+        return {"error": "invalid_role"}, 400
     with session_scope() as db_session:
         existing = get_user_by_username(db_session, username)
         if existing is not None:
             return {"error": "username_exists"}, 409
         first_user = not has_users(db_session)
-        user = create_user(db_session, username, hash_password(password), is_admin=first_user)
+        if first_user:
+            role = "superadmin"
+        if role is None:
+            role = "user"
+        user = create_user(db_session, username, hash_password(password), role=role)
         return user_to_dict(user), 201
 
 
