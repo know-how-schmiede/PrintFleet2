@@ -1,0 +1,15 @@
+[Unit]
+Description=PrintFleet2
+After=network.target
+
+[Service]
+Type=simple
+User=printfleet2
+WorkingDirectory=__REPO_DIR__/src
+Environment=PYTHONUNBUFFERED=1
+ExecStart=__VENV_DIR__/bin/python -m printfleet2
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
