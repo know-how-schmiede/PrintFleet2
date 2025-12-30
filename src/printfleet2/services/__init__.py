@@ -13,6 +13,7 @@ from printfleet2.services.user_service import (
     create_user,
     get_user,
     get_user_by_username,
+    has_users,
     list_users,
     user_to_dict,
 )
@@ -26,6 +27,7 @@ __all__ = [
     "get_user",
     "get_user_by_username",
     "hash_password",
+    "has_users",
     "list_printers",
     "list_users",
     "printer_to_dict",

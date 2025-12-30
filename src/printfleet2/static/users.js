@@ -34,14 +34,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const table = document.getElementById("userTable");
     table.innerHTML = "";
     if (!items.length) {
-      table.innerHTML = "<tr><td colspan=\"3\" class=\"muted\">No users loaded yet.</td></tr>";
+      table.innerHTML = "<tr><td colspan=\"4\" class=\"muted\">No users loaded yet.</td></tr>";
       return;
     }
     items.forEach((user) => {
       const row = document.createElement("tr");
+      const roleLabel = user.is_admin ? "Admin" : "User";
       row.innerHTML = `
         <td>${user.id}</td>
         <td>${user.username}</td>
+        <td>${roleLabel}</td>
         <td>${user.created_at}</td>
       `;
       table.appendChild(row);

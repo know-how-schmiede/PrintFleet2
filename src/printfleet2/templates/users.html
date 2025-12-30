@@ -11,6 +11,11 @@
     </div>
 
     <div class="card">
+      {% if first_user %}
+        <div class="notice success">
+          First user created here will become the admin account.
+        </div>
+      {% endif %}
       <h3>Create user</h3>
       <p class="muted">Username and password are required.</p>
       <div id="userNotice" class="notice"></div>
@@ -41,12 +46,13 @@
             <tr>
               <th>ID</th>
               <th>Username</th>
+              <th>Role</th>
               <th>Created</th>
             </tr>
           </thead>
           <tbody id="userTable">
             <tr>
-              <td colspan="3" class="muted">No users loaded yet.</td>
+              <td colspan="4" class="muted">No users loaded yet.</td>
             </tr>
           </tbody>
         </table>

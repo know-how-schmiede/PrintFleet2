@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}PrintFleet2 | Login{% endblock %}
+
+{% block content %}
+  <section class="container docs">
+    <div class="docs-hero">
+      <p class="eyebrow">Access</p>
+      <h1>Sign in to PrintFleet2</h1>
+      <p class="lead">Use your account credentials to continue.</p>
+    </div>
+
+    <div class="card auth-card">
+      {% if first_user %}
+        <div class="notice success">
+          No users exist yet. Create the first admin account on the <a href="/users">Users</a> page.
+        </div>
+      {% endif %}
+      <div id="loginNotice" class="notice"></div>
+      <form id="loginForm" class="form-grid">
+        <label>
+          Username
+          <input type="text" id="loginUsername" autocomplete="username" required>
+        </label>
+        <label>
+          Password
+          <input type="password" id="loginPassword" autocomplete="current-password" required>
+        </label>
+        <div class="form-actions">
+          <button class="btn primary" type="submit">Login</button>
+          <a class="btn outline" href="/users">Create user</a>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='login.js') }}" defer></script>
+{% endblock %}

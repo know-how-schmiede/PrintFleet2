@@ -1,4 +1,4 @@
-from flask import Blueprint, request, session, Response, render_template
+from flask import Blueprint, request, session as flask_session, Response, render_template, redirect, url_for
 
 from printfleet2.db.session import session_scope
 from printfleet2.services.printer_service import (
@@ -15,6 +15,7 @@ from printfleet2.services.user_service import (
     create_user,
     get_user,
     get_user_by_username,
+    has_users,
     list_users,
     user_to_dict,
 )
@@ -121,7 +122,8 @@ def post_user():
         existing = get_user_by_username(db_session, username)
         if existing is not None:
             return {"error": "username_exists"}, 409
-        user = create_user(db_session, username, hash_password(password))
+        first_user = not has_users(db_session)
+        user = create_user(db_session, username, hash_password(password), is_admin=first_user)
         return user_to_dict(user), 201
 
 
@@ -147,25 +149,25 @@ def login():
         user = get_user_by_username(db_session, username)
         if user is None or not verify_password(user.password_hash, password):
             return {"error": "invalid_credentials"}, 401
-        session["user_id"] = user.id
+        flask_session["user_id"] = user.id
         return {"status": "ok", "user": user_to_dict(user)}
 
 
 @bp.post("/api/auth/logout")
 def logout():
-    session.pop("user_id", None)
+    flask_session.pop("user_id", None)
     return {"status": "ok"}
 
 
 @bp.get("/api/auth/me")
 def auth_me():
-    user_id = session.get("user_id")
+    user_id = flask_session.get("user_id")
     if not user_id:
         return {"error": "not_authenticated"}, 401
     with session_scope() as db_session:
         user = get_user(db_session, int(user_id))
         if user is None:
-            session.pop("user_id", None)
+            flask_session.pop("user_id", None)
             return {"error": "not_authenticated"}, 401
         return {"user": user_to_dict(user)}
 
@@ -205,4 +207,19 @@ def printers_page():
 
 @bp.get("/users")
 def users_page():
-    return render_template("users.html")
+    with session_scope() as db_session:
+        first_user = not has_users(db_session)
+    return render_template("users.html", first_user=first_user)
+
+
+@bp.get("/login")
+def login_page():
+    with session_scope() as db_session:
+        first_user = not has_users(db_session)
+    return render_template("login.html", first_user=first_user)
+
+
+@bp.get("/logout")
+def logout_page():
+    flask_session.pop("user_id", None)
+    return redirect(url_for("web.login_page"))

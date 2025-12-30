@@ -167,6 +167,11 @@ body {
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
 }
 
+.auth-card {
+  max-width: 520px;
+  margin: 0 auto;
+}
+
 .metric {
   display: flex;
   justify-content: space-between;

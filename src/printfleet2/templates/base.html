@@ -22,6 +22,7 @@
           <a href="/users">Users</a>
           <a href="/docs">Docs</a>
           <a href="/api/docs" class="ghost">API JSON</a>
+          <a href="/login" id="authLink" class="ghost">Login</a>
         </nav>
       </div>
     </header>
@@ -37,6 +38,24 @@
       </div>
     </footer>
 
+    <script>
+      (async function() {
+        const authLink = document.getElementById("authLink");
+        if (!authLink) return;
+        try {
+          const res = await fetch("/api/auth/me", { credentials: "same-origin" });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.user) {
+              authLink.textContent = "Logout";
+              authLink.href = "/logout";
+            }
+          }
+        } catch (err) {
+          /* ignore */
+        }
+      })();
+    </script>
     {% block scripts %}{% endblock %}
   </body>
 </html>
