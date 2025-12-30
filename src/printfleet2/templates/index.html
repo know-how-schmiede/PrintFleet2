@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}PrintFleet2 | Dashboard{% endblock %}
+
+{% block content %}
+  <section class="hero">
+    <div class="container hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">PrintFleet2</p>
+        <h1>Control your fleet with a cleaner core.</h1>
+        <p class="lead">
+          This scaffold focuses on stability and scalability. SQLAlchemy and Alembic are wired
+          for growth while keeping the interface practical for daily use.
+        </p>
+        <div class="hero-actions">
+          <a class="btn primary" href="/docs">View API docs</a>
+          <a class="btn outline" href="/api/printers">Printers JSON</a>
+        </div>
+      </div>
+      <div class="hero-card reveal" style="animation-delay: 0.1s">
+        <h3>Live snapshot</h3>
+        <div class="metric">
+          <span class="metric-label">Printers</span>
+          <span class="metric-value" id="printerCount">--</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Language</span>
+          <span class="metric-value" id="settingsLanguage">--</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Poll interval</span>
+          <span class="metric-value" id="settingsPoll">--</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="container grid">
+    <article class="card reveal" style="animation-delay: 0.2s">
+      <h3>System defaults</h3>
+      <p class="muted">Settings row is auto-created and can be updated via API.</p>
+      <ul class="spec">
+        <li><span>Reload interval</span><strong id="settingsReload">--</strong></li>
+        <li><span>Kiosk layout</span><strong id="settingsLayout">--</strong></li>
+      </ul>
+    </article>
+    <article class="card reveal" style="animation-delay: 0.3s">
+      <h3>Printer list</h3>
+      <p class="muted">First entries from the database.</p>
+      <ul class="list" id="printerList">
+        <li class="muted">No printers loaded yet.</li>
+      </ul>
+    </article>
+    <article class="card reveal" style="animation-delay: 0.4s">
+      <h3>Quick actions</h3>
+      <div class="actions">
+        <a class="btn soft" href="/api/settings">Get settings</a>
+        <a class="btn soft" href="/api/printers">List printers</a>
+        <a class="btn soft" href="/api/users">List users</a>
+      </div>
+    </article>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    async function loadSettings() {
+      const res = await fetch("/api/settings");
+      if (!res.ok) return;
+      const data = await res.json();
+      document.getElementById("settingsLanguage").textContent = data.language || "--";
+      document.getElementById("settingsPoll").textContent = data.poll_interval ? data.poll_interval + "s" : "--";
+      document.getElementById("settingsReload").textContent = data.db_reload_interval ? data.db_reload_interval + "s" : "--";
+      document.getElementById("settingsLayout").textContent = data.kiosk_stream_layout || "--";
+    }
+
+    async function loadPrinters() {
+      const res = await fetch("/api/printers");
+      if (!res.ok) return;
+      const data = await res.json();
+      const items = data.items || [];
+      document.getElementById("printerCount").textContent = items.length;
+      const list = document.getElementById("printerList");
+      list.innerHTML = "";
+      if (!items.length) {
+        list.innerHTML = "<li class=\\"muted\\">No printers loaded yet.</li>";
+        return;
+      }
+      items.slice(0, 4).forEach((printer) => {
+        const li = document.createElement("li");
+        li.textContent = printer.name + " (" + printer.backend + ")";
+        list.appendChild(li);
+      });
+    }
+
+    loadSettings();
+    loadPrinters();
+  </script>
+{% endblock %}

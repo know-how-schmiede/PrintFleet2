@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}PrintFleet2{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container nav">
+        <div class="brand">
+          <span class="brand-mark"></span>
+          <span class="brand-name">PrintFleet2</span>
+        </div>
+        <nav class="nav-links">
+          <a href="/">Home</a>
+          <a href="/printers">Printers</a>
+          <a href="/docs">Docs</a>
+          <a href="/api/docs" class="ghost">API JSON</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="site-main">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer">
+        <span>PrintFleet2 scaffold</span>
+        <span class="muted">SQLAlchemy + Alembic baseline</span>
+      </div>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

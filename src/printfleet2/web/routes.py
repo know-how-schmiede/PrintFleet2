@@ -1,4 +1,4 @@
-from flask import Blueprint, request, session, Response
+from flask import Blueprint, request, session, Response, render_template
 
 from printfleet2.db.session import session_scope
 from printfleet2.services.printer_service import (
@@ -26,7 +26,7 @@ bp = Blueprint("web", __name__)
 
 @bp.get("/")
 def index():
-    return {"status": "ok", "app": "PrintFleet2"}
+    return render_template("index.html")
 
 
 @bp.get("/api/settings")
@@ -195,38 +195,9 @@ def api_docs():
 
 @bp.get("/docs")
 def docs_page():
-    html = """
-    <!doctype html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <title>PrintFleet2 API</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          code { background: #f2f2f2; padding: 2px 4px; }
-          h1 { margin-bottom: 8px; }
-          ul { line-height: 1.6; }
-        </style>
-      </head>
-      <body>
-        <h1>PrintFleet2 API</h1>
-        <p>Minimal endpoint list. JSON version: <code>/api/docs</code></p>
-        <ul>
-          <li><code>GET /api/settings</code></li>
-          <li><code>PUT|PATCH /api/settings</code></li>
-          <li><code>GET /api/printers</code></li>
-          <li><code>POST /api/printers</code></li>
-          <li><code>GET /api/printers/{id}</code></li>
-          <li><code>PUT|PATCH /api/printers/{id}</code></li>
-          <li><code>DELETE /api/printers/{id}</code></li>
-          <li><code>GET /api/users</code></li>
-          <li><code>POST /api/users</code></li>
-          <li><code>GET /api/users/{id}</code></li>
-          <li><code>POST /api/auth/login</code></li>
-          <li><code>POST /api/auth/logout</code></li>
-          <li><code>GET /api/auth/me</code></li>
-        </ul>
-      </body>
-    </html>
-    """
-    return Response(html, mimetype="text/html")
+    return render_template("docs.html")
+
+
+@bp.get("/printers")
+def printers_page():
+    return render_template("printers.html")

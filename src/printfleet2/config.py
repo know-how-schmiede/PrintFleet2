@@ -3,7 +3,8 @@ from pathlib import Path
 import os
 
 
-DEFAULT_DATA_DIR = Path(os.environ.get("PRINTFLEET2_DATA_DIR", "data"))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_DATA_DIR = Path(os.environ.get("PRINTFLEET2_DATA_DIR", str(PROJECT_ROOT / "data")))
 
 
 def _sqlite_url(path: Path) -> str:

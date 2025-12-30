@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}PrintFleet2 | API Docs{% endblock %}
+
+{% block content %}
+  <section class="container docs">
+    <div class="docs-hero">
+      <p class="eyebrow">API overview</p>
+      <h1>PrintFleet2 API endpoints</h1>
+      <p class="lead">Minimal reference for the scaffolded endpoints.</p>
+    </div>
+
+    <div class="card stack">
+      <h3>Settings</h3>
+      <ul class="list">
+        <li><code>GET /api/settings</code></li>
+        <li><code>PUT /api/settings</code></li>
+        <li><code>PATCH /api/settings</code></li>
+      </ul>
+    </div>
+
+    <div class="card stack">
+      <h3>Printers</h3>
+      <ul class="list">
+        <li><code>GET /api/printers</code></li>
+        <li><code>POST /api/printers</code></li>
+        <li><code>GET /api/printers/{id}</code></li>
+        <li><code>PUT /api/printers/{id}</code></li>
+        <li><code>PATCH /api/printers/{id}</code></li>
+        <li><code>DELETE /api/printers/{id}</code></li>
+      </ul>
+    </div>
+
+    <div class="card stack">
+      <h3>Users & auth</h3>
+      <ul class="list">
+        <li><code>GET /api/users</code></li>
+        <li><code>POST /api/users</code></li>
+        <li><code>GET /api/users/{id}</code></li>
+        <li><code>POST /api/auth/login</code></li>
+        <li><code>POST /api/auth/logout</code></li>
+        <li><code>GET /api/auth/me</code></li>
+      </ul>
+    </div>
+
+    <div class="card stack">
+      <h3>JSON list</h3>
+      <p class="muted">Use <code>/api/docs</code> for the JSON version.</p>
+    </div>
+  </section>
+{% endblock %}

@@ -14,6 +14,7 @@ def create_app() -> Flask:
     app.config["ENV"] = cfg.env
     app.config["DEBUG"] = cfg.debug
 
+    app.logger.info("Database URL: %s", cfg.database_url)
     init_engine(cfg.database_url)
     try:
         with session_scope() as session:
