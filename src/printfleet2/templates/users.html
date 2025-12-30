@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}PrintFleet2 | Users{% endblock %}
+
+{% block content %}
+  <section class="container docs">
+    <div class="docs-hero">
+      <p class="eyebrow">Users</p>
+      <h1>User management</h1>
+      <p class="lead">Create accounts and view existing users.</p>
+    </div>
+
+    <div class="card">
+      <h3>Create user</h3>
+      <p class="muted">Username and password are required.</p>
+      <div id="userNotice" class="notice"></div>
+      <form id="userForm" class="form-grid">
+        <label>
+          Username
+          <input type="text" id="userName" required>
+        </label>
+        <label>
+          Password
+          <input type="password" id="userPassword" required>
+        </label>
+        <div class="form-actions">
+          <button class="btn primary" type="submit" id="userSubmit">Create user</button>
+          <button class="btn outline" type="button" id="userReset">Clear</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="table-header">
+        <h3>Existing users</h3>
+        <button class="btn soft" id="userRefresh" type="button">Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Username</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody id="userTable">
+            <tr>
+              <td colspan="3" class="muted">No users loaded yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='users.js') }}" defer></script>
+{% endblock %}

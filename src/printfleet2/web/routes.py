@@ -201,3 +201,8 @@ def docs_page():
 @bp.get("/printers")
 def printers_page():
     return render_template("printers.html")
+
+
+@bp.get("/users")
+def users_page():
+    return render_template("users.html")
