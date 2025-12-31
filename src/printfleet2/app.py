@@ -35,6 +35,8 @@ def create_app() -> Flask:
             "web.logout",
             "web.logout_page",
             "web.live_wall_page",
+            "web.live_wall_status",
+            "web.live_wall_plug_status",
         }
 
         with session_scope() as db_session:

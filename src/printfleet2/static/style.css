@@ -2,6 +2,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   font-family: "Space Grotesk", sans-serif;
@@ -526,6 +530,74 @@ label.checkbox input {
   background: rgba(15, 23, 42, 0.03);
   display: grid;
   gap: 6px;
+}
+
+.printer-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.printer-status,
+.plug-status {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.plug-icon {
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 0.85em;
+  line-height: 1;
+}
+
+.printer-status.status-ok,
+.plug-status.status-ok {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+}
+
+.printer-status.status-warn,
+.plug-status.status-warn {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.printer-status.status-error,
+.plug-status.status-error {
+  background: rgba(239, 68, 68, 0.14);
+  color: #b91c1c;
+}
+
+.printer-status.status-muted,
+.plug-status.status-muted {
+  background: rgba(15, 23, 42, 0.08);
+  color: var(--muted);
+}
+
+.printer-temps {
+  font-size: 0.85rem;
+}
+
+.printer-job,
+.printer-progress,
+.printer-times {
+  font-size: 0.85rem;
+}
+
+.printer-error-details {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px dashed rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.06);
+  white-space: pre-wrap;
 }
 
 .stack {

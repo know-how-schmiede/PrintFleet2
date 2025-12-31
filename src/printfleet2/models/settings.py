@@ -25,6 +25,7 @@ class Settings(Base):
     kiosk_stream_layout: Mapped[str | None] = mapped_column(String, nullable=True)
     live_wall_printer_columns: Mapped[int | None] = mapped_column(Integer, nullable=True)
     live_wall_printer_data: Mapped[str | None] = mapped_column(String, nullable=True)
+    live_wall_plug_poll_interval: Mapped[float | None] = mapped_column(Float, nullable=True)
     kiosk_stream_url_1: Mapped[str | None] = mapped_column(String, nullable=True)
     kiosk_camera_host_1: Mapped[str | None] = mapped_column(String, nullable=True)
     kiosk_camera_user_1: Mapped[str | None] = mapped_column(String, nullable=True)

@@ -3,7 +3,7 @@
 {% block title %}PrintFleet Live-Wall{% endblock %}
 
 {% block content %}
-  <section class="container live-wall">
+  <section class="container live-wall" data-plug-poll-interval="{{ live_wall.plug_poll_interval }}" data-status-poll-interval="{{ live_wall.status_poll_interval }}">
     <div class="live-wall-hero">
       <div>
         <p class="eyebrow">Live-Wall</p>
@@ -49,8 +49,31 @@
       {% if active_printers %}
         <div class="live-wall-printer-grid" style="--printer-columns: {{ live_wall.printer_columns }};">
           {% for printer in active_printers %}
-            <div class="live-wall-printer">
+            <div class="live-wall-printer" data-printer-id="{{ printer.id }}">
               <strong>{{ printer.name }}</strong>
+              <div class="printer-badges">
+                <span class="printer-status status-{{ printer.status_state }}" data-printer-status>{{ printer.status }}</span>
+                <span class="plug-status status-{{ printer.plug_state or "muted" }}" data-plug-status{% if not printer.plug_label %} hidden{% endif %}>
+                  <span class="plug-icon" aria-hidden="true">&#9889;</span>
+                  <span data-plug-label>{{ (printer.plug_label or "") | replace("Plug ", "") }}</span>
+                </span>
+              </div>
+              <span class="printer-temps muted" data-printer-temps>
+                Hotend {{ "%.1f"|format(printer.temp_hotend) if printer.temp_hotend is not none else "--" }} C / Bed {{ "%.1f"|format(printer.temp_bed) if printer.temp_bed is not none else "--" }} C
+              </span>
+              <span class="printer-job muted" data-printer-job>
+                Job: {{ printer.job_name or "--" }}
+              </span>
+              <span class="printer-progress muted" data-printer-progress>
+                Progress: {{ "%.0f"|format(printer.progress) if printer.progress is not none else "--" }}%
+              </span>
+              <span class="printer-times muted" data-printer-times>
+                Elapsed {{ "%.0f"|format(printer.elapsed) if printer.elapsed is not none else "--" }}s · Remaining {{ "%.0f"|format(printer.remaining) if printer.remaining is not none else "--" }}s
+              </span>
+              <button class="btn small outline printer-error-toggle" type="button" data-error-toggle{% if not printer.error_message %} hidden{% endif %}>
+                Show Details
+              </button>
+              <div class="printer-error-details muted" data-error-details hidden>{{ printer.error_message or "" }}</div>
               {% if live_wall.printer_data != "light" and (printer.location or printer.type) %}
                 <span class="muted">
                   {{ printer.location or "Location n/a" }}{% if printer.type %} · {{ printer.type }}{% endif %}
@@ -69,4 +92,8 @@
       {% endif %}
     </div>
   </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='live_wall.js') }}" defer></script>
 {% endblock %}

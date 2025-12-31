@@ -16,12 +16,16 @@ def ensure_settings_schema(session: Session) -> None:
         missing["live_wall_printer_columns"] = "INTEGER"
     if "live_wall_printer_data" not in columns:
         missing["live_wall_printer_data"] = "TEXT"
+    if "live_wall_plug_poll_interval" not in columns:
+        missing["live_wall_plug_poll_interval"] = "REAL"
     if not missing:
         return
     try:
         with engine.begin() as conn:
             for column_name, column_type in missing.items():
                 conn.execute(text(f"ALTER TABLE settings ADD COLUMN {column_name} {column_type}"))
+            if "live_wall_plug_poll_interval" in missing:
+                conn.execute(text("UPDATE settings SET live_wall_plug_poll_interval = 5.0"))
     except Exception:
         return
 
@@ -45,6 +49,20 @@ def normalize_printer_data(value: object | None) -> str:
     return "normal"
 
 
+def normalize_plug_poll_interval(value: object | None) -> float | None:
+    if value is None:
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    if parsed < 1:
+        return 1.0
+    if parsed > 300:
+        return 300.0
+    return parsed
+
+
 def ensure_settings_row(session: Session) -> Settings:
     ensure_settings_schema(session)
     settings = session.get(Settings, 1)
@@ -58,6 +76,7 @@ def ensure_settings_row(session: Session) -> Settings:
             kiosk_stream_layout="standard",
             live_wall_printer_columns=3,
             live_wall_printer_data="normal",
+            live_wall_plug_poll_interval=5.0,
         )
         session.add(settings)
     return settings
@@ -80,6 +99,7 @@ def settings_to_dict(settings: Settings) -> dict:
         "kiosk_stream_layout": settings.kiosk_stream_layout,
         "live_wall_printer_columns": settings.live_wall_printer_columns,
         "live_wall_printer_data": settings.live_wall_printer_data,
+        "live_wall_plug_poll_interval": settings.live_wall_plug_poll_interval,
         "kiosk_stream_url_1": settings.kiosk_stream_url_1,
         "kiosk_camera_host_1": settings.kiosk_camera_host_1,
         "kiosk_camera_user_1": settings.kiosk_camera_user_1,
@@ -131,6 +151,7 @@ def update_settings(settings: Settings, data: dict) -> Settings:
         "kiosk_camera_password_4",
         "live_wall_printer_columns",
         "live_wall_printer_data",
+        "live_wall_plug_poll_interval",
     ):
         if field in data:
             setattr(settings, field, data[field])
@@ -142,4 +163,8 @@ def update_settings(settings: Settings, data: dict) -> Settings:
         settings.live_wall_printer_columns = normalize_printer_columns(settings.live_wall_printer_columns)
     if "live_wall_printer_data" in data:
         settings.live_wall_printer_data = normalize_printer_data(settings.live_wall_printer_data)
+    if "live_wall_plug_poll_interval" in data:
+        settings.live_wall_plug_poll_interval = normalize_plug_poll_interval(
+            settings.live_wall_plug_poll_interval
+        )
     return settings

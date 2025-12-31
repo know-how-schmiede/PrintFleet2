@@ -1,5 +1,13 @@
 # PrintFleet2 Versions
 
+## 0.6.5 - 2025-12-31
+
+- Drucker Status abfragen
+- Temperaturwerte abfragen
+- Status-Badge für Tasmota-Steckdosen pro Printer
+- Poll Intervall Tasmota-Steckdosen in Settings
+- Anpassungen Badge (einzeilige Darstellung)
+
 ## 0.6.4 - 2025-12-31
 
 - Ergänzung Daten Printer

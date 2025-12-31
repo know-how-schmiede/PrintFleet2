@@ -38,11 +38,15 @@ document.addEventListener("DOMContentLoaded", () => {
     kiosk_camera_password_4: "settingKioskCameraPassword4",
     live_wall_printer_columns: "settingLiveWallPrinterColumns",
     live_wall_printer_data: "settingLiveWallPrinterData",
+    live_wall_plug_poll_interval: "settingLiveWallPlugPollInterval",
   };
 
-  const numericFields = new Set(["poll_interval", "db_reload_interval"]);
+  const numericFields = new Set(["poll_interval", "db_reload_interval", "live_wall_plug_poll_interval"]);
   const integerFields = {
     live_wall_printer_columns: { min: 1, max: 5 },
+  };
+  const numericBounds = {
+    live_wall_plug_poll_interval: { min: 1, max: 300 },
   };
 
   function setNotice(message, type) {
@@ -64,6 +68,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (fieldId === "settingLiveWallPrinterData" && (value === null || value === undefined || value === "")) {
       field.value = "normal";
+      return;
+    }
+    if (fieldId === "settingLiveWallPlugPollInterval" && (value === null || value === undefined || value === "")) {
+      field.value = "5";
       return;
     }
     field.value = value ?? "";
@@ -113,6 +121,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const parsed = Number(trimmed);
         if (Number.isNaN(parsed) || parsed < 0) {
           return { error: `Invalid value for ${key.replace("_", " ")}.` };
+        }
+        if (Object.prototype.hasOwnProperty.call(numericBounds, key)) {
+          const { min, max } = numericBounds[key];
+          if (parsed < min || parsed > max) {
+            return { error: `Invalid value for ${key.replace("_", " ")}.` };
+          }
         }
         payload[key] = parsed;
         continue;

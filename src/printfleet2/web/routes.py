@@ -10,10 +10,16 @@ from printfleet2.services.printer_service import (
     printers_to_dict,
     update_printer,
 )
+from printfleet2.services.printer_status_service import (
+    build_printer_snapshots,
+    collect_plug_statuses,
+    collect_printer_statuses,
+)
 from printfleet2.services.settings_service import (
     ensure_settings_row,
     normalize_printer_data,
     normalize_printer_columns,
+    normalize_plug_poll_interval,
     settings_to_dict,
     update_settings,
 )
@@ -74,27 +80,66 @@ def build_live_wall_config(settings: dict) -> dict:
     add_stream(settings.get("kiosk_stream_url_3"), "Stream 3")
     add_stream(settings.get("kiosk_stream_url_4"), "Stream 4")
 
+    poll_interval = settings.get("poll_interval")
+    try:
+        poll_interval_value = float(poll_interval) if poll_interval is not None else None
+    except (TypeError, ValueError):
+        poll_interval_value = None
+    if not poll_interval_value or poll_interval_value <= 0:
+        poll_interval_value = 5.0
+
     return {
         "layout": normalize_layout(settings.get("kiosk_stream_layout")),
         "printer_columns": normalize_printer_columns(settings.get("live_wall_printer_columns")) or 3,
         "printer_data": normalize_printer_data(settings.get("live_wall_printer_data")),
+        "plug_poll_interval": normalize_plug_poll_interval(settings.get("live_wall_plug_poll_interval")) or 5.0,
+        "status_poll_interval": poll_interval_value,
         "streams": streams,
     }
 
 
 def build_live_wall_printers(printers) -> list[dict]:
+    status_map = collect_printer_statuses([printer for printer in printers if printer.enabled], include_plug=True)
     active_printers = []
     for printer in printers:
         if not printer.enabled:
             continue
+        status = status_map.get(
+            printer.id,
+            {
+                "label": "Unknown",
+                "state": "muted",
+                "temp_hotend": None,
+                "temp_bed": None,
+                "job_name": None,
+                "progress": None,
+                "elapsed": None,
+                "remaining": None,
+                "error_message": None,
+                "plug_label": None,
+                "plug_state": None,
+            },
+        )
         active_printers.append(
             {
+                "id": printer.id,
                 "name": printer.name,
                 "location": printer.location,
                 "type": printer.printer_type,
                 "backend": printer.backend,
                 "host": printer.host,
                 "port": printer.port,
+                "status": status["label"],
+                "status_state": status["state"],
+                "temp_hotend": status.get("temp_hotend"),
+                "temp_bed": status.get("temp_bed"),
+                "job_name": status.get("job_name"),
+                "progress": status.get("progress"),
+                "elapsed": status.get("elapsed"),
+                "remaining": status.get("remaining"),
+                "error_message": status.get("error_message"),
+                "plug_label": status.get("plug_label"),
+                "plug_state": status.get("plug_state"),
             }
         )
     return active_printers
@@ -139,6 +184,66 @@ def get_printers():
     with session_scope() as session:
         printers = list_printers(session)
         return {"items": printers_to_dict(printers)}
+
+
+@bp.get("/api/live-wall/status")
+def live_wall_status():
+    with session_scope() as session:
+        printers = [printer for printer in list_printers(session) if printer.enabled]
+        snapshots = build_printer_snapshots(printers)
+    status_map = collect_printer_statuses(snapshots, include_plug=False)
+    items = []
+    for printer in snapshots:
+        status = status_map.get(
+            printer.id,
+            {
+                "label": "Unknown",
+                "state": "muted",
+                "temp_hotend": None,
+                "temp_bed": None,
+                "job_name": None,
+                "progress": None,
+                "elapsed": None,
+                "remaining": None,
+                "error_message": None,
+            },
+        )
+        items.append(
+            {
+                "id": printer.id,
+                "status": status["label"],
+                "status_state": status["state"],
+                "temp_hotend": status.get("temp_hotend"),
+                "temp_bed": status.get("temp_bed"),
+                "job_name": status.get("job_name"),
+                "progress": status.get("progress"),
+                "elapsed": status.get("elapsed"),
+                "remaining": status.get("remaining"),
+                "error_message": status.get("error_message"),
+            }
+        )
+    return {"items": items}
+
+
+@bp.get("/api/live-wall/plug-status")
+def live_wall_plug_status():
+    with session_scope() as session:
+        printers = [printer for printer in list_printers(session) if printer.enabled]
+        snapshots = build_printer_snapshots(printers)
+    status_map = collect_plug_statuses(snapshots)
+    items = []
+    for printer in snapshots:
+        status = status_map.get(printer.id)
+        if not status:
+            continue
+        items.append(
+            {
+                "id": printer.id,
+                "plug_label": status.get("plug_label"),
+                "plug_state": status.get("plug_state"),
+            }
+        )
+    return {"items": items}
 
 
 @bp.post("/api/net-scan")
@@ -338,6 +443,8 @@ def api_docs():
             {"method": "GET", "path": "/api/settings"},
             {"method": "PUT", "path": "/api/settings"},
             {"method": "PATCH", "path": "/api/settings"},
+            {"method": "GET", "path": "/api/live-wall/status"},
+            {"method": "GET", "path": "/api/live-wall/plug-status"},
             {"method": "GET", "path": "/api/printers"},
             {"method": "POST", "path": "/api/printers"},
             {"method": "GET", "path": "/api/printers/{id}"},
