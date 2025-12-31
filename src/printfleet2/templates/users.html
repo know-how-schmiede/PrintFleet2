@@ -73,7 +73,12 @@
     <div class="card">
       <div class="table-header">
         <h3>Existing users</h3>
-        <button class="btn soft" id="userRefresh" type="button">Refresh</button>
+        <div class="table-actions">
+          <button class="btn soft" id="userRefresh" type="button">Refresh</button>
+          <button class="btn soft" id="userExport" type="button">Export JSON</button>
+          <button class="btn soft" id="userImport" type="button">Import JSON</button>
+          <input type="file" id="userImportFile" accept=".json,application/json" hidden>
+        </div>
       </div>
       <div class="table-wrap">
         <table class="data-table">
@@ -100,5 +105,5 @@
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='users.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='users.js', v=app_version) }}" defer></script>
 {% endblock %}

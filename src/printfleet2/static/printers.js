@@ -4,6 +4,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const submitBtn = document.getElementById("printerSubmit");
   const resetBtn = document.getElementById("printerReset");
   const refreshBtn = document.getElementById("printerRefresh");
+  const exportBtn = document.getElementById("printerExport");
+  const importBtn = document.getElementById("printerImport");
+  const importFile = document.getElementById("printerImportFile");
   const netScanBtn = document.getElementById("netScanButton");
   const netScanNotice = document.getElementById("netScanNotice");
   const netScanTable = document.getElementById("netScanTable");
@@ -38,6 +41,102 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const trimmed = field.value.trim();
     return trimmed ? trimmed : null;
+  }
+
+  function normalizeText(value) {
+    if (typeof value !== "string") {
+      return "";
+    }
+    return value.trim();
+  }
+
+  function optionalText(value) {
+    if (typeof value !== "string") {
+      return null;
+    }
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+  }
+
+  function numericValue(value, fallback) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : fallback;
+  }
+
+  function buildImportPayload(raw) {
+    if (!raw || typeof raw !== "object") {
+      return null;
+    }
+    const name = normalizeText(raw.name);
+    const backend = normalizeText(raw.backend);
+    const host = normalizeText(raw.host);
+    if (!name || !backend || !host) {
+      return null;
+    }
+    return {
+      name,
+      backend,
+      host,
+      port: numericValue(raw.port, 80),
+      error_report_interval: numericValue(raw.error_report_interval, 30),
+      location: optionalText(raw.location),
+      printer_type: optionalText(raw.printer_type),
+      notes: optionalText(raw.notes),
+      token: optionalText(raw.token),
+      api_key: optionalText(raw.api_key),
+      tasmota_host: optionalText(raw.tasmota_host),
+      tasmota_topic: optionalText(raw.tasmota_topic),
+      https: !!raw.https,
+      enabled: raw.enabled !== undefined ? !!raw.enabled : true,
+      scanning:
+        raw.scanning !== undefined ? !!raw.scanning : raw.no_scanning !== undefined ? !raw.no_scanning : true,
+    };
+  }
+
+  function normalizeKey(value) {
+    if (typeof value !== "string") {
+      return "";
+    }
+    return value.trim().toLowerCase();
+  }
+
+  function buildHostKey(payload) {
+    if (!payload) {
+      return "";
+    }
+    return [
+      normalizeKey(payload.backend),
+      normalizeKey(payload.host),
+      String(numericValue(payload.port, 80)),
+    ].join("|");
+  }
+
+  function buildExportFileName() {
+    const now = new Date();
+    const pad = (value) => String(value).padStart(2, "0");
+    return (
+      "printfleet_printers_" +
+      now.getFullYear() +
+      pad(now.getMonth() + 1) +
+      pad(now.getDate()) +
+      "_" +
+      pad(now.getHours()) +
+      pad(now.getMinutes()) +
+      pad(now.getSeconds()) +
+      ".json"
+    );
+  }
+
+  function downloadJson(filename, payload) {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   }
 
   function formData() {
@@ -196,6 +295,137 @@ document.addEventListener("DOMContentLoaded", () => {
 
   resetBtn.addEventListener("click", () => clearForm());
   refreshBtn.addEventListener("click", loadPrinters);
+
+  if (exportBtn) {
+    exportBtn.addEventListener("click", async () => {
+      exportBtn.disabled = true;
+      setNotice("Preparing export...", "success");
+      try {
+        const res = await fetch("/api/printers");
+        if (!res.ok) {
+          throw new Error("export_failed");
+        }
+        const data = await res.json().catch(() => ({}));
+        const items = data.items || [];
+        downloadJson(buildExportFileName(), {
+          exported_at: new Date().toISOString(),
+          items,
+        });
+        setNotice(`Exported ${items.length} printer(s).`, "success");
+      } catch (error) {
+        setNotice("Failed to export printers.", "error");
+      } finally {
+        exportBtn.disabled = false;
+      }
+    });
+  }
+
+  if (importBtn && importFile) {
+    importBtn.addEventListener("click", () => importFile.click());
+    importFile.addEventListener("change", async () => {
+      const file = importFile.files && importFile.files[0];
+      importFile.value = "";
+      if (!file) {
+        return;
+      }
+      let payload;
+      try {
+        const text = await file.text();
+        payload = JSON.parse(text);
+      } catch (error) {
+        setNotice("Invalid JSON file.", "error");
+        return;
+      }
+      const items = Array.isArray(payload) ? payload : Array.isArray(payload.items) ? payload.items : null;
+      if (!items) {
+        setNotice("JSON must contain an array of printers.", "error");
+        return;
+      }
+      if (!items.length) {
+        setNotice("No printers found in JSON.", "error");
+        return;
+      }
+      if (
+        !confirm(
+          `Import ${items.length} printer(s)? Only printers not already in the database will be imported.`
+        )
+      ) {
+        return;
+      }
+      importBtn.disabled = true;
+      setNotice(`Importing ${items.length} printer(s)...`, "success");
+      let created = 0;
+      let skippedInvalid = 0;
+      let skippedExisting = 0;
+      let failed = 0;
+      const existingRes = await fetch("/api/printers");
+      if (!existingRes.ok) {
+        setNotice("Failed to load existing printers.", "error");
+        importBtn.disabled = false;
+        return;
+      }
+      const existingData = await existingRes.json().catch(() => ({}));
+      const existingItems = existingData.items || [];
+      const existingNameKeys = new Set(
+        existingItems.map((printer) => normalizeKey(printer.name)).filter(Boolean)
+      );
+      const existingHostKeys = new Set(
+        existingItems.map((printer) =>
+          buildHostKey({
+            backend: printer.backend,
+            host: printer.host,
+            port: printer.port,
+          })
+        ).filter(Boolean)
+      );
+      for (const raw of items) {
+        const data = buildImportPayload(raw);
+        if (!data) {
+          skippedInvalid += 1;
+          continue;
+        }
+        const nameKey = normalizeKey(data.name);
+        const hostKey = buildHostKey(data);
+        if ((nameKey && existingNameKeys.has(nameKey)) || (hostKey && existingHostKeys.has(hostKey))) {
+          skippedExisting += 1;
+          continue;
+        }
+        try {
+          const res = await fetch("/api/printers", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          });
+          if (res.ok) {
+            created += 1;
+            if (nameKey) {
+              existingNameKeys.add(nameKey);
+            }
+            if (hostKey) {
+              existingHostKeys.add(hostKey);
+            }
+          } else {
+            failed += 1;
+          }
+        } catch (error) {
+          failed += 1;
+        }
+      }
+      if (failed) {
+        setNotice(
+          `Import complete: ${created} created, ${skippedExisting} existing, ${skippedInvalid} invalid, ${failed} failed.`,
+          "error"
+        );
+      } else {
+        setNotice(
+          `Import complete: ${created} created, ${skippedExisting} existing, ${skippedInvalid} invalid.`,
+          "success"
+        );
+      }
+      importBtn.disabled = false;
+      loadPrinters();
+    });
+  }
 
   if (netScanBtn && netScanTable) {
     netScanBtn.addEventListener("click", async () => {

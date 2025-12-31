@@ -157,7 +157,39 @@ def clean_optional(value: object | None) -> str | None:
 
 @bp.get("/")
 def index():
-    return render_template("index.html")
+    with session_scope() as session:
+        printers = list_printers(session)
+        enabled_printers = [printer for printer in printers if printer.enabled]
+        snapshots = build_printer_snapshots(enabled_printers)
+        active_printer_names = [printer.name for printer in enabled_printers]
+    status_map = collect_printer_statuses(snapshots, include_plug=False)
+    active_prints = 0
+    active_errors = 0
+    for printer in snapshots:
+        status = status_map.get(
+            printer.id,
+            {
+                "label": "Unknown",
+                "state": "muted",
+                "error_message": None,
+            },
+        )
+        label = status.get("label")
+        if isinstance(label, str) and "printing" in label.lower():
+            active_prints += 1
+        error_message = status.get("error_message")
+        if status.get("state") == "error" or (isinstance(error_message, str) and error_message.strip()):
+            active_errors += 1
+    snapshot = {
+        "total_printers": len(printers),
+        "active_prints": active_prints,
+        "active_errors": active_errors,
+    }
+    return render_template(
+        "index.html",
+        snapshot=snapshot,
+        active_printer_names=active_printer_names,
+    )
 
 
 @bp.get("/api/settings")
@@ -189,8 +221,11 @@ def get_printers():
 @bp.get("/api/live-wall/status")
 def live_wall_status():
     with session_scope() as session:
-        printers = [printer for printer in list_printers(session) if printer.enabled]
-        snapshots = build_printer_snapshots(printers)
+        printers = list_printers(session)
+        enabled_printers = [printer for printer in printers if printer.enabled]
+        snapshots = build_printer_snapshots(enabled_printers)
+        total_printers = len(printers)
+        name_map = {printer.id: printer.name for printer in enabled_printers}
     status_map = collect_printer_statuses(snapshots, include_plug=False)
     items = []
     for printer in snapshots:
@@ -211,6 +246,7 @@ def live_wall_status():
         items.append(
             {
                 "id": printer.id,
+                "name": name_map.get(printer.id),
                 "status": status["label"],
                 "status_state": status["state"],
                 "temp_hotend": status.get("temp_hotend"),
@@ -222,7 +258,7 @@ def live_wall_status():
                 "error_message": status.get("error_message"),
             }
         )
-    return {"items": items}
+    return {"items": items, "total_printers": total_printers}
 
 
 @bp.get("/api/live-wall/plug-status")
@@ -302,6 +338,79 @@ def get_users():
     with session_scope() as db_session:
         users = list_users(db_session)
         return {"items": [user_to_dict(user) for user in users]}
+
+
+@bp.get("/api/users/export")
+def export_users():
+    with session_scope() as db_session:
+        users = list_users(db_session)
+        items = []
+        for user in users:
+            data = user_to_dict(user)
+            data["password_hash"] = user.password_hash
+            items.append(data)
+        return {"items": items}
+
+
+@bp.post("/api/users/import")
+def import_users():
+    payload = request.get_json(silent=True) or {}
+    if isinstance(payload, list):
+        items = payload
+    elif isinstance(payload, dict):
+        items = payload.get("items") or payload.get("users")
+    else:
+        items = None
+    if not isinstance(items, list):
+        return {"error": "invalid_json"}, 400
+    created = 0
+    skipped = 0
+    invalid = 0
+    with session_scope() as db_session:
+        existing_users = list_users(db_session)
+        existing_usernames = {user.username.lower() for user in existing_users if user.username}
+        first_user = not existing_users
+        for raw in items:
+            if not isinstance(raw, dict):
+                invalid += 1
+                continue
+            username = clean_optional(raw.get("username"))
+            if not username:
+                invalid += 1
+                continue
+            username_key = username.lower()
+            if username_key in existing_usernames:
+                skipped += 1
+                continue
+            password_hash = clean_optional(raw.get("password_hash"))
+            if not password_hash:
+                password = raw.get("password")
+                if not isinstance(password, str) or not password:
+                    invalid += 1
+                    continue
+                password_hash = hash_password(password)
+            role = normalize_role(raw.get("role"))
+            if raw.get("role") is not None and role is None:
+                invalid += 1
+                continue
+            if first_user:
+                role = "superadmin"
+                first_user = False
+            if role is None:
+                role = "user"
+            create_user(
+                db_session,
+                username,
+                password_hash,
+                role=role,
+                first_name=clean_optional(raw.get("first_name")),
+                last_name=clean_optional(raw.get("last_name")),
+                email=clean_optional(raw.get("email")),
+                notes=clean_optional(raw.get("notes")),
+            )
+            existing_usernames.add(username_key)
+            created += 1
+    return {"created": created, "skipped": skipped, "invalid": invalid}
 
 
 @bp.post("/api/users")
@@ -452,6 +561,8 @@ def api_docs():
             {"method": "PATCH", "path": "/api/printers/{id}"},
             {"method": "DELETE", "path": "/api/printers/{id}"},
             {"method": "GET", "path": "/api/users"},
+            {"method": "GET", "path": "/api/users/export"},
+            {"method": "POST", "path": "/api/users/import"},
             {"method": "POST", "path": "/api/users"},
             {"method": "GET", "path": "/api/users/{id}"},
             {"method": "DELETE", "path": "/api/users/{id}"},

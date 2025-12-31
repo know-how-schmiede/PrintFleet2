@@ -21,15 +21,15 @@
         <h3>Live snapshot</h3>
         <div class="metric">
           <span class="metric-label">Printers</span>
-          <span class="metric-value" id="printerCount">--</span>
+          <span class="metric-value" id="printerCount">{{ snapshot.total_printers if snapshot else "--" }}</span>
         </div>
         <div class="metric">
-          <span class="metric-label">Language</span>
-          <span class="metric-value" id="settingsLanguage">--</span>
+          <span class="metric-label">Active prints</span>
+          <span class="metric-value" id="activePrintsCount">{{ snapshot.active_prints if snapshot else "--" }}</span>
         </div>
         <div class="metric">
-          <span class="metric-label">Poll interval</span>
-          <span class="metric-value" id="settingsPoll">--</span>
+          <span class="metric-label">Active errors</span>
+          <span class="metric-value" id="activeErrorsCount">{{ snapshot.active_errors if snapshot else "--" }}</span>
         </div>
       </div>
     </div>
@@ -46,9 +46,15 @@
     </article>
     <article class="card reveal" style="animation-delay: 0.3s">
       <h3>Printer list</h3>
-      <p class="muted">First entries from the database.</p>
+      <p class="muted">Active printers from the database.</p>
       <ul class="list" id="printerList">
-        <li class="muted">No printers loaded yet.</li>
+        {% if active_printer_names %}
+          {% for name in active_printer_names %}
+            <li>{{ name }}</li>
+          {% endfor %}
+        {% else %}
+          <li class="muted">No active printers loaded yet.</li>
+        {% endif %}
       </ul>
     </article>
     <article class="card reveal" style="animation-delay: 0.4s">
@@ -64,36 +70,103 @@
 
 {% block scripts %}
   <script>
+    let snapshotIntervalId = null;
+    let snapshotIntervalMs = 5000;
+
+    async function fetchJson(url, options = {}) {
+      try {
+        const res = await fetch(url, { credentials: "same-origin", ...options });
+        if (!res.ok) {
+          return null;
+        }
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          return null;
+        }
+        return await res.json();
+      } catch (error) {
+        return null;
+      }
+    }
+
     async function loadSettings() {
-      const res = await fetch("/api/settings");
-      if (!res.ok) return;
-      const data = await res.json();
-      document.getElementById("settingsLanguage").textContent = data.language || "--";
-      document.getElementById("settingsPoll").textContent = data.poll_interval ? data.poll_interval + "s" : "--";
+      const data = await fetchJson("/api/settings");
+      if (!data) return;
       document.getElementById("settingsReload").textContent = data.db_reload_interval ? data.db_reload_interval + "s" : "--";
       document.getElementById("settingsLayout").textContent = data.kiosk_stream_layout || "--";
+      const pollSeconds = Number(data.poll_interval);
+      if (Number.isFinite(pollSeconds) && pollSeconds > 0) {
+        snapshotIntervalMs = Math.round(pollSeconds * 1000);
+      }
     }
 
-    async function loadPrinters() {
-      const res = await fetch("/api/printers");
-      if (!res.ok) return;
-      const data = await res.json();
-      const items = data.items || [];
-      document.getElementById("printerCount").textContent = items.length;
+    function isPrintingStatus(status) {
+      if (!status || typeof status.status !== "string") {
+        return false;
+      }
+      return status.status.toLowerCase().includes("printing");
+    }
+
+    function hasErrorStatus(status) {
+      if (!status) {
+        return false;
+      }
+      if (status.status_state === "error") {
+        return true;
+      }
+      if (typeof status.error_message === "string" && status.error_message.trim()) {
+        return true;
+      }
+      return false;
+    }
+
+    async function loadLiveSnapshot() {
+      const [printersData, statusData] = await Promise.all([
+        fetchJson("/api/printers"),
+        fetchJson("/api/live-wall/status", { cache: "no-store" }),
+      ]);
+
+      const printers = (printersData && printersData.items) || [];
+      const activePrinters = printers.filter((printer) => printer.enabled);
+      const statuses = (statusData && statusData.items) || [];
+      const totalPrinters = statusData ? Number(statusData.total_printers) : NaN;
+      const totalCount = Number.isFinite(totalPrinters) ? totalPrinters : printers.length || statuses.length;
+      document.getElementById("printerCount").textContent = Number.isFinite(totalCount) ? totalCount : "--";
+
       const list = document.getElementById("printerList");
       list.innerHTML = "";
-      if (!items.length) {
-        list.innerHTML = "<li class=\\"muted\\">No printers loaded yet.</li>";
-        return;
+      const listItems = activePrinters.length ? activePrinters : statuses;
+      if (!listItems.length) {
+        list.innerHTML = "<li class=\\"muted\\">No active printers loaded yet.</li>";
+      } else {
+        listItems.forEach((printer) => {
+          const li = document.createElement("li");
+          li.textContent = printer.name || "Unnamed printer";
+          list.appendChild(li);
+        });
       }
-      items.slice(0, 4).forEach((printer) => {
-        const li = document.createElement("li");
-        li.textContent = printer.name + " (" + printer.backend + ")";
-        list.appendChild(li);
-      });
+
+      if (statuses.length) {
+        const activePrints = statuses.filter(isPrintingStatus).length;
+        const activeErrors = statuses.filter(hasErrorStatus).length;
+        document.getElementById("activePrintsCount").textContent = activePrints;
+        document.getElementById("activeErrorsCount").textContent = activeErrors;
+      }
     }
 
-    loadSettings();
-    loadPrinters();
+    function scheduleLiveSnapshot() {
+      if (snapshotIntervalId) {
+        clearInterval(snapshotIntervalId);
+      }
+      snapshotIntervalId = setInterval(loadLiveSnapshot, snapshotIntervalMs);
+    }
+
+    async function initDashboard() {
+      await loadSettings();
+      await loadLiveSnapshot();
+      scheduleLiveSnapshot();
+    }
+
+    initDashboard();
   </script>
 {% endblock %}

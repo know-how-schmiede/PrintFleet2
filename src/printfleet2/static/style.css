@@ -386,6 +386,12 @@ label.checkbox input {
   gap: 12px;
 }
 
+.table-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .btn.small {
   padding: 6px 10px;
   font-size: 0.85rem;

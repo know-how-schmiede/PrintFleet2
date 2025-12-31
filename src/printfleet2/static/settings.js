@@ -2,6 +2,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("settingsForm");
   const notice = document.getElementById("settingsNotice");
   const resetBtn = document.getElementById("settingsReset");
+  const exportBtn = document.getElementById("settingsExport");
+  const importBtn = document.getElementById("settingsImport");
+  const importFile = document.getElementById("settingsImportFile");
 
   if (!form || !notice || !resetBtn) {
     return;
@@ -77,6 +80,34 @@ document.addEventListener("DOMContentLoaded", () => {
     field.value = value ?? "";
   }
 
+  function downloadJson(filename, payload) {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function buildExportFileName() {
+    const now = new Date();
+    const pad = (value) => String(value).padStart(2, "0");
+    return (
+      "printfleet_settings_" +
+      now.getFullYear() +
+      pad(now.getMonth() + 1) +
+      pad(now.getDate()) +
+      "_" +
+      pad(now.getHours()) +
+      pad(now.getMinutes()) +
+      pad(now.getSeconds()) +
+      ".json"
+    );
+  }
+
   async function loadSettings() {
     setNotice("", "");
     const res = await fetch("/api/settings");
@@ -137,6 +168,27 @@ document.addEventListener("DOMContentLoaded", () => {
     return { payload };
   }
 
+  function extractImportSettings(payload) {
+    if (!payload || typeof payload !== "object") {
+      return null;
+    }
+    if (payload.settings && typeof payload.settings === "object") {
+      return payload.settings;
+    }
+    return payload;
+  }
+
+  function applyImportSettings(settings) {
+    let applied = 0;
+    Object.entries(fields).forEach(([key, fieldId]) => {
+      if (Object.prototype.hasOwnProperty.call(settings, key)) {
+        setFieldValue(fieldId, settings[key]);
+        applied += 1;
+      }
+    });
+    return applied;
+  }
+
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const { payload, error } = buildPayload();
@@ -166,6 +218,87 @@ document.addEventListener("DOMContentLoaded", () => {
   resetBtn.addEventListener("click", () => {
     loadSettings();
   });
+
+  if (exportBtn) {
+    exportBtn.addEventListener("click", async () => {
+      exportBtn.disabled = true;
+      setNotice("Preparing settings export...", "success");
+      try {
+        const res = await fetch("/api/settings");
+        if (!res.ok) {
+          throw new Error("export_failed");
+        }
+        const data = await res.json().catch(() => ({}));
+        downloadJson(buildExportFileName(), {
+          exported_at: new Date().toISOString(),
+          settings: data,
+        });
+        setNotice("Settings exported.", "success");
+      } catch (error) {
+        setNotice("Failed to export settings.", "error");
+      } finally {
+        exportBtn.disabled = false;
+      }
+    });
+  }
+
+  if (importBtn && importFile) {
+    importBtn.addEventListener("click", () => importFile.click());
+    importFile.addEventListener("change", async () => {
+      const file = importFile.files && importFile.files[0];
+      importFile.value = "";
+      if (!file) {
+        return;
+      }
+      let payload;
+      try {
+        const text = await file.text();
+        payload = JSON.parse(text);
+      } catch (error) {
+        setNotice("Invalid JSON file.", "error");
+        return;
+      }
+      const settings = extractImportSettings(payload);
+      if (!settings) {
+        setNotice("JSON must contain settings data.", "error");
+        return;
+      }
+      const applied = applyImportSettings(settings);
+      if (!applied) {
+        setNotice("No matching settings found in JSON.", "error");
+        return;
+      }
+      if (!confirm("Import settings? This will overwrite current settings.")) {
+        return;
+      }
+      const { payload: importPayload, error } = buildPayload();
+      if (error) {
+        setNotice(error, "error");
+        return;
+      }
+      importBtn.disabled = true;
+      setNotice("Importing settings...", "success");
+      const res = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(importPayload),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setNotice(data.error || "Failed to import settings.", "error");
+        importBtn.disabled = false;
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      Object.entries(fields).forEach(([key, fieldId]) => {
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+          setFieldValue(fieldId, data[key]);
+        }
+      });
+      setNotice("Settings imported.", "success");
+      importBtn.disabled = false;
+    });
+  }
 
   loadSettings();
 });

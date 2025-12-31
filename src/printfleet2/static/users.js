@@ -6,6 +6,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const submitBtn = document.getElementById("userSubmit");
   const resetBtn = document.getElementById("userReset");
   const refreshBtn = document.getElementById("userRefresh");
+  const exportBtn = document.getElementById("userExport");
+  const importBtn = document.getElementById("userImport");
+  const importFile = document.getElementById("userImportFile");
   const roleField = document.getElementById("userRole");
   const firstUser = form?.dataset.firstUser === "true";
   const passwordField = document.getElementById("userPassword");
@@ -23,6 +26,47 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!message) {
       notice.className = "notice";
     }
+  }
+
+  function buildExportFileName() {
+    const now = new Date();
+    const pad = (value) => String(value).padStart(2, "0");
+    return (
+      "printfleet_users_" +
+      now.getFullYear() +
+      pad(now.getMonth() + 1) +
+      pad(now.getDate()) +
+      "_" +
+      pad(now.getHours()) +
+      pad(now.getMinutes()) +
+      pad(now.getSeconds()) +
+      ".json"
+    );
+  }
+
+  function downloadJson(filename, payload) {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function extractImportUsers(payload) {
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+    if (payload && Array.isArray(payload.items)) {
+      return payload.items;
+    }
+    if (payload && Array.isArray(payload.users)) {
+      return payload.users;
+    }
+    return null;
   }
 
   function clearForm(keepNotice) {
@@ -194,6 +238,92 @@ document.addEventListener("DOMContentLoaded", () => {
 
   resetBtn.addEventListener("click", () => clearForm(false));
   refreshBtn.addEventListener("click", loadUsers);
+  if (exportBtn) {
+    exportBtn.addEventListener("click", async () => {
+      exportBtn.disabled = true;
+      setNotice("Preparing users export...", "success");
+      try {
+        const res = await fetch("/api/users/export");
+        if (!res.ok) {
+          throw new Error("export_failed");
+        }
+        const data = await res.json().catch(() => ({}));
+        const items = data.items || [];
+        downloadJson(buildExportFileName(), {
+          exported_at: new Date().toISOString(),
+          items,
+        });
+        setNotice(`Exported ${items.length} user(s).`, "success");
+      } catch (error) {
+        setNotice("Failed to export users.", "error");
+      } finally {
+        exportBtn.disabled = false;
+      }
+    });
+  }
+
+  if (importBtn && importFile) {
+    importBtn.addEventListener("click", () => importFile.click());
+    importFile.addEventListener("change", async () => {
+      const file = importFile.files && importFile.files[0];
+      importFile.value = "";
+      if (!file) {
+        return;
+      }
+      let payload;
+      try {
+        const text = await file.text();
+        payload = JSON.parse(text);
+      } catch (error) {
+        setNotice("Invalid JSON file.", "error");
+        return;
+      }
+      const items = extractImportUsers(payload);
+      if (!items) {
+        setNotice("JSON must contain an array of users.", "error");
+        return;
+      }
+      if (!items.length) {
+        setNotice("No users found in JSON.", "error");
+        return;
+      }
+      if (
+        !confirm(
+          `Import ${items.length} user(s)? Only users not already in the database will be imported. Password hashes from export files are supported.`
+        )
+      ) {
+        return;
+      }
+      importBtn.disabled = true;
+      setNotice(`Importing ${items.length} user(s)...`, "success");
+      try {
+        const res = await fetch("/api/users/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          setNotice(data.error || "Failed to import users.", "error");
+          importBtn.disabled = false;
+          return;
+        }
+        const data = await res.json().catch(() => ({}));
+        const created = Number(data.created) || 0;
+        const skipped = Number(data.skipped) || 0;
+        const invalid = Number(data.invalid) || 0;
+        setNotice(
+          `Import complete: ${created} created, ${skipped} existing, ${invalid} invalid.`,
+          "success"
+        );
+        importBtn.disabled = false;
+        await loadUsers();
+      } catch (error) {
+        setNotice("Failed to import users.", "error");
+        importBtn.disabled = false;
+      }
+    });
+  }
   document.getElementById("userTable").addEventListener("click", async (event) => {
     const editButton = event.target.closest(".user-edit");
     if (editButton) {

@@ -93,7 +93,12 @@
     <div class="card">
       <div class="table-header">
         <h3>Configured printers</h3>
-        <button class="btn soft" id="printerRefresh" type="button">Refresh</button>
+        <div class="table-actions">
+          <button class="btn soft" id="printerRefresh" type="button">Refresh</button>
+          <button class="btn soft" id="printerExport" type="button">Export JSON</button>
+          <button class="btn soft" id="printerImport" type="button">Import JSON</button>
+          <input type="file" id="printerImportFile" accept=".json,application/json" hidden>
+        </div>
       </div>
       <div class="table-wrap">
         <table class="data-table">

@@ -1,5 +1,11 @@
 # PrintFleet2 Versions
 
+## 0.6.6 - 2025-12-31
+
+- Live snapshot Aktualisierung auf Homepage
+- Printer Ex- und Import als JSON
+- Settings Ex- und Import als JSON
+
 ## 0.6.5 - 2025-12-31
 
 - Drucker Status abfragen
