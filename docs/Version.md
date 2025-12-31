@@ -1,5 +1,13 @@
 # PrintFleet2 Versions
 
+## 0.6.3 - 2025-12-31
+
+- API JSON Button entfernen
+- Settings / Stream auf- und zuklappbare Bereiche
+- Anordnung und Abstände zwischen Formularfeldern (Stream) anpassen
+- Einstellbares Grid für Live-Wall (Settings)
+- Darstellung Printer-Data in Live-Wall (Settings)
+
 ## 0.6.2 - 2025-12-30
 
 Theme (light + dark), Settings auswählbar

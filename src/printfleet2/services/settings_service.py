@@ -1,9 +1,52 @@
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
 from printfleet2.models.settings import Settings
 
 
+def ensure_settings_schema(session: Session) -> None:
+    engine = session.get_bind()
+    inspector = inspect(engine)
+    try:
+        columns = {column["name"] for column in inspector.get_columns("settings")}
+    except Exception:
+        return
+    missing = {}
+    if "live_wall_printer_columns" not in columns:
+        missing["live_wall_printer_columns"] = "INTEGER"
+    if "live_wall_printer_data" not in columns:
+        missing["live_wall_printer_data"] = "TEXT"
+    if not missing:
+        return
+    try:
+        with engine.begin() as conn:
+            for column_name, column_type in missing.items():
+                conn.execute(text(f"ALTER TABLE settings ADD COLUMN {column_name} {column_type}"))
+    except Exception:
+        return
+
+
+def normalize_printer_columns(value: object | None) -> int | None:
+    if value is None:
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return min(5, max(1, parsed))
+
+
+def normalize_printer_data(value: object | None) -> str:
+    if value is None:
+        return "normal"
+    candidate = str(value).strip().lower()
+    if candidate in {"light", "normal", "all"}:
+        return candidate
+    return "normal"
+
+
 def ensure_settings_row(session: Session) -> Settings:
+    ensure_settings_schema(session)
     settings = session.get(Settings, 1)
     if settings is None:
         settings = Settings(
@@ -13,6 +56,8 @@ def ensure_settings_row(session: Session) -> Settings:
             language="en",
             theme="lightTheme",
             kiosk_stream_layout="standard",
+            live_wall_printer_columns=3,
+            live_wall_printer_data="normal",
         )
         session.add(settings)
     return settings
@@ -33,6 +78,8 @@ def settings_to_dict(settings: Settings) -> dict:
         "kiosk_camera_user": settings.kiosk_camera_user,
         "kiosk_camera_password": settings.kiosk_camera_password,
         "kiosk_stream_layout": settings.kiosk_stream_layout,
+        "live_wall_printer_columns": settings.live_wall_printer_columns,
+        "live_wall_printer_data": settings.live_wall_printer_data,
         "kiosk_stream_url_1": settings.kiosk_stream_url_1,
         "kiosk_camera_host_1": settings.kiosk_camera_host_1,
         "kiosk_camera_user_1": settings.kiosk_camera_user_1,
@@ -82,6 +129,8 @@ def update_settings(settings: Settings, data: dict) -> Settings:
         "kiosk_camera_host_4",
         "kiosk_camera_user_4",
         "kiosk_camera_password_4",
+        "live_wall_printer_columns",
+        "live_wall_printer_data",
     ):
         if field in data:
             setattr(settings, field, data[field])
@@ -89,4 +138,8 @@ def update_settings(settings: Settings, data: dict) -> Settings:
         settings.poll_interval = float(settings.poll_interval) if settings.poll_interval is not None else None
     if "db_reload_interval" in data:
         settings.db_reload_interval = float(settings.db_reload_interval) if settings.db_reload_interval is not None else None
+    if "live_wall_printer_columns" in data:
+        settings.live_wall_printer_columns = normalize_printer_columns(settings.live_wall_printer_columns)
+    if "live_wall_printer_data" in data:
+        settings.live_wall_printer_data = normalize_printer_data(settings.live_wall_printer_data)
     return settings

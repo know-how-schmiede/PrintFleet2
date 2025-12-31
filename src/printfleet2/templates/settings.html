@@ -46,107 +46,117 @@
       <div class="card stack">
         <h3>Live-Wall</h3>
         <p class="muted">Configure stream sources and camera credentials.</p>
-        <div class="form-grid">
-          <label>
-            Stream layout
-            <input type="text" id="settingKioskLayout" placeholder="standard">
-          </label>
-          <label>
-            Primary stream URL
-            <input type="text" id="settingKioskStreamUrl">
-          </label>
-          <label>
-            Primary camera host
-            <input type="text" id="settingKioskCameraHost">
-          </label>
-          <label>
-            Primary camera user
-            <input type="text" id="settingKioskCameraUser" autocomplete="username">
-          </label>
-          <label>
-            Primary camera password
-            <input type="password" id="settingKioskCameraPassword" autocomplete="new-password">
-          </label>
-        </div>
 
-        <h4>Stream 1</h4>
-        <div class="form-grid">
-          <label>
-            Stream URL
-            <input type="text" id="settingKioskStreamUrl1">
-          </label>
-          <label>
-            Camera host
-            <input type="text" id="settingKioskCameraHost1">
-          </label>
-          <label>
-            Camera user
-            <input type="text" id="settingKioskCameraUser1" autocomplete="username">
-          </label>
-          <label>
-            Camera password
-            <input type="password" id="settingKioskCameraPassword1" autocomplete="new-password">
-          </label>
-        </div>
+        <details class="stream-section">
+          <summary>Stream 1</summary>
+          <div class="form-grid">
+            <label class="stream-url">
+              Stream URL
+              <input type="text" id="settingKioskStreamUrl1">
+            </label>
+            <label class="stream-host">
+              Camera host
+              <input type="text" id="settingKioskCameraHost1">
+            </label>
+            <label>
+              Camera user
+              <input type="text" id="settingKioskCameraUser1" autocomplete="username">
+            </label>
+            <label>
+              Camera password
+              <input type="password" id="settingKioskCameraPassword1" autocomplete="new-password">
+            </label>
+          </div>
+        </details>
 
-        <h4>Stream 2</h4>
-        <div class="form-grid">
-          <label>
-            Stream URL
-            <input type="text" id="settingKioskStreamUrl2">
-          </label>
-          <label>
-            Camera host
-            <input type="text" id="settingKioskCameraHost2">
-          </label>
-          <label>
-            Camera user
-            <input type="text" id="settingKioskCameraUser2" autocomplete="username">
-          </label>
-          <label>
-            Camera password
-            <input type="password" id="settingKioskCameraPassword2" autocomplete="new-password">
-          </label>
-        </div>
+        <details class="stream-section">
+          <summary>Stream 2</summary>
+          <div class="form-grid">
+            <label class="stream-url">
+              Stream URL
+              <input type="text" id="settingKioskStreamUrl2">
+            </label>
+            <label class="stream-host">
+              Camera host
+              <input type="text" id="settingKioskCameraHost2">
+            </label>
+            <label>
+              Camera user
+              <input type="text" id="settingKioskCameraUser2" autocomplete="username">
+            </label>
+            <label>
+              Camera password
+              <input type="password" id="settingKioskCameraPassword2" autocomplete="new-password">
+            </label>
+          </div>
+        </details>
 
-        <h4>Stream 3</h4>
-        <div class="form-grid">
-          <label>
-            Stream URL
-            <input type="text" id="settingKioskStreamUrl3">
-          </label>
-          <label>
-            Camera host
-            <input type="text" id="settingKioskCameraHost3">
-          </label>
-          <label>
-            Camera user
-            <input type="text" id="settingKioskCameraUser3" autocomplete="username">
-          </label>
-          <label>
-            Camera password
-            <input type="password" id="settingKioskCameraPassword3" autocomplete="new-password">
-          </label>
-        </div>
+        <details class="stream-section">
+          <summary>Stream 3</summary>
+          <div class="form-grid">
+            <label class="stream-url">
+              Stream URL
+              <input type="text" id="settingKioskStreamUrl3">
+            </label>
+            <label class="stream-host">
+              Camera host
+              <input type="text" id="settingKioskCameraHost3">
+            </label>
+            <label>
+              Camera user
+              <input type="text" id="settingKioskCameraUser3" autocomplete="username">
+            </label>
+            <label>
+              Camera password
+              <input type="password" id="settingKioskCameraPassword3" autocomplete="new-password">
+            </label>
+          </div>
+        </details>
 
-        <h4>Stream 4</h4>
-        <div class="form-grid">
-          <label>
-            Stream URL
-            <input type="text" id="settingKioskStreamUrl4">
-          </label>
-          <label>
-            Camera host
-            <input type="text" id="settingKioskCameraHost4">
-          </label>
-          <label>
-            Camera user
-            <input type="text" id="settingKioskCameraUser4" autocomplete="username">
-          </label>
-          <label>
-            Camera password
-            <input type="password" id="settingKioskCameraPassword4" autocomplete="new-password">
-          </label>
+        <details class="stream-section">
+          <summary>Stream 4</summary>
+          <div class="form-grid">
+            <label class="stream-url">
+              Stream URL
+              <input type="text" id="settingKioskStreamUrl4">
+            </label>
+            <label class="stream-host">
+              Camera host
+              <input type="text" id="settingKioskCameraHost4">
+            </label>
+            <label>
+              Camera user
+              <input type="text" id="settingKioskCameraUser4" autocomplete="username">
+            </label>
+            <label>
+              Camera password
+              <input type="password" id="settingKioskCameraPassword4" autocomplete="new-password">
+            </label>
+          </div>
+        </details>
+
+        <div class="stream-section printer-layout">
+          <h4>Printer layout</h4>
+          <div class="form-grid">
+            <label class="printer-columns printer-layout-select">
+              Printers per row
+              <select id="settingLiveWallPrinterColumns">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select>
+            </label>
+            <label class="printer-data printer-layout-select">
+              Printer data
+              <select id="settingLiveWallPrinterData">
+                <option value="light">light Data</option>
+                <option value="normal" selected>normal Data</option>
+                <option value="all">all Data</option>
+              </select>
+            </label>
+          </div>
         </div>
       </div>
 

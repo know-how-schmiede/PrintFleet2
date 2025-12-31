@@ -10,7 +10,13 @@ from printfleet2.services.printer_service import (
     printers_to_dict,
     update_printer,
 )
-from printfleet2.services.settings_service import ensure_settings_row, settings_to_dict, update_settings
+from printfleet2.services.settings_service import (
+    ensure_settings_row,
+    normalize_printer_data,
+    normalize_printer_columns,
+    settings_to_dict,
+    update_settings,
+)
 from printfleet2.services.user_service import (
     create_user,
     get_user,
@@ -69,6 +75,8 @@ def build_live_wall_config(settings: dict) -> dict:
 
     return {
         "layout": normalize_layout(settings.get("kiosk_stream_layout")),
+        "printer_columns": normalize_printer_columns(settings.get("live_wall_printer_columns")) or 3,
+        "printer_data": normalize_printer_data(settings.get("live_wall_printer_data")),
         "streams": streams,
     }
 
@@ -83,6 +91,9 @@ def build_live_wall_printers(printers) -> list[dict]:
                 "name": printer.name,
                 "location": printer.location,
                 "type": printer.printer_type,
+                "backend": printer.backend,
+                "host": printer.host,
+                "port": printer.port,
             }
         )
     return active_printers

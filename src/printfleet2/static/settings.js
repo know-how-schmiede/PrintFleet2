@@ -36,9 +36,14 @@ document.addEventListener("DOMContentLoaded", () => {
     kiosk_camera_host_4: "settingKioskCameraHost4",
     kiosk_camera_user_4: "settingKioskCameraUser4",
     kiosk_camera_password_4: "settingKioskCameraPassword4",
+    live_wall_printer_columns: "settingLiveWallPrinterColumns",
+    live_wall_printer_data: "settingLiveWallPrinterData",
   };
 
   const numericFields = new Set(["poll_interval", "db_reload_interval"]);
+  const integerFields = {
+    live_wall_printer_columns: { min: 1, max: 5 },
+  };
 
   function setNotice(message, type) {
     notice.textContent = message;
@@ -51,6 +56,14 @@ document.addEventListener("DOMContentLoaded", () => {
   function setFieldValue(fieldId, value) {
     const field = document.getElementById(fieldId);
     if (!field) {
+      return;
+    }
+    if (fieldId === "settingLiveWallPrinterColumns" && (value === null || value === undefined || value === "")) {
+      field.value = "3";
+      return;
+    }
+    if (fieldId === "settingLiveWallPrinterData" && (value === null || value === undefined || value === "")) {
+      field.value = "normal";
       return;
     }
     field.value = value ?? "";
@@ -77,6 +90,20 @@ document.addEventListener("DOMContentLoaded", () => {
         continue;
       }
       const rawValue = field.value;
+      if (Object.prototype.hasOwnProperty.call(integerFields, key)) {
+        const trimmed = rawValue.trim();
+        if (!trimmed) {
+          payload[key] = null;
+          continue;
+        }
+        const parsed = Number(trimmed);
+        const { min, max } = integerFields[key];
+        if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
+          return { error: `Invalid value for ${key.replace("_", " ")}.` };
+        }
+        payload[key] = parsed;
+        continue;
+      }
       if (numericFields.has(key)) {
         const trimmed = rawValue.trim();
         if (!trimmed) {

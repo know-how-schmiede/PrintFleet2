@@ -47,13 +47,18 @@
         <span class="muted">{{ active_printers | length }} active</span>
       </div>
       {% if active_printers %}
-        <div class="live-wall-printer-grid">
+        <div class="live-wall-printer-grid" style="--printer-columns: {{ live_wall.printer_columns }};">
           {% for printer in active_printers %}
             <div class="live-wall-printer">
               <strong>{{ printer.name }}</strong>
-              {% if printer.location or printer.type %}
+              {% if live_wall.printer_data != "light" and (printer.location or printer.type) %}
                 <span class="muted">
                   {{ printer.location or "Location n/a" }}{% if printer.type %} · {{ printer.type }}{% endif %}
+                </span>
+              {% endif %}
+              {% if live_wall.printer_data == "all" %}
+                <span class="muted">
+                  {{ printer.backend }} · {{ printer.host }}{% if printer.port %}:{{ printer.port }}{% endif %}
                 </span>
               {% endif %}
             </div>

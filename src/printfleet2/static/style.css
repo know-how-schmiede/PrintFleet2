@@ -20,7 +20,7 @@ body {
 .site-header {
   position: sticky;
   top: 0;
-  background: rgba(255, 255, 255, 0.85);
+  
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   z-index: 10;
@@ -210,6 +210,37 @@ body {
   font-size: 1rem;
 }
 
+.stream-section {
+  margin-top: 16px;
+  padding: 10px 14px 6px;
+  border-radius: 12px;
+  border: 1px dashed var(--border);
+  background: rgba(15, 23, 42, 0.02);
+}
+
+.stream-section summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+}
+
+.stream-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.stream-section summary::after {
+  content: "+";
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.stream-section[open] summary::after {
+  content: "-";
+}
+
 .list {
   list-style: none;
   padding: 0;
@@ -248,9 +279,29 @@ body {
 
 .form-grid {
   display: grid;
-  gap: 16px;
+  gap: 16px 22px;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   margin-top: 16px;
+}
+
+.stream-section .form-grid .stream-url {
+  grid-column: 1 / -1;
+}
+
+.stream-section .form-grid .stream-host {
+  grid-column: 1 / -1;
+  justify-self: start;
+  width: min(260px, 100%);
+}
+
+.printer-layout-select {
+  justify-self: start;
+  width: fit-content;
+}
+
+.printer-layout-select select {
+  width: max-content;
+  min-width: 0;
 }
 
 label {
@@ -262,7 +313,7 @@ label {
 
 input,
 select {
-  padding: 10px 12px;
+  padding: 10px 5px;
   border-radius: 10px;
   border: 1px solid var(--border);
   font: inherit;
@@ -465,7 +516,7 @@ label.checkbox input {
 .live-wall-printer-grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(var(--printer-columns, 3), minmax(0, 1fr));
 }
 
 .live-wall-printer {
