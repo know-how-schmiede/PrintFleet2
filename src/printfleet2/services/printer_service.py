@@ -1,5 +1,6 @@
 from typing import Iterable
 
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
 from printfleet2.models.printer import Printer
@@ -21,22 +22,55 @@ def _bool_value(value: object, default: bool) -> bool:
     return default
 
 
+def _resolve_scanning(data: dict, default: bool) -> bool:
+    if "scanning" in data:
+        return _bool_value(data.get("scanning"), default)
+    if "no_scanning" in data:
+        return not _bool_value(data.get("no_scanning"), False)
+    return default
+
+
+def ensure_printer_schema(session: Session) -> None:
+    engine = session.get_bind()
+    inspector = inspect(engine)
+    try:
+        columns = {column["name"] for column in inspector.get_columns("printers")}
+    except Exception:
+        return
+    if "scanning" in columns:
+        return
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE printers ADD COLUMN scanning BOOLEAN DEFAULT 1"))
+            if "no_scanning" in columns:
+                conn.execute(
+                    text("UPDATE printers SET scanning = CASE WHEN no_scanning = 1 THEN 0 ELSE 1 END")
+                )
+            else:
+                conn.execute(text("UPDATE printers SET scanning = 1"))
+    except Exception:
+        return
+
+
 def list_printers(session: Session) -> list[Printer]:
+    ensure_printer_schema(session)
     return session.query(Printer).order_by(Printer.id).all()
 
 
 def get_printer(session: Session, printer_id: int) -> Printer | None:
+    ensure_printer_schema(session)
     return session.get(Printer, printer_id)
 
 
 def create_printer(session: Session, data: dict) -> Printer:
+    ensure_printer_schema(session)
     printer = Printer(
         name=data["name"],
         backend=data["backend"],
         host=data["host"],
         port=data.get("port", 80),
         https=_bool_value(data.get("https"), False),
-        no_scanning=_bool_value(data.get("no_scanning"), False),
+        scanning=_resolve_scanning(data, True),
         token=data.get("token"),
         api_key=data.get("api_key"),
         error_report_interval=float(data.get("error_report_interval", 30.0)),
@@ -62,8 +96,8 @@ def update_printer(session: Session, printer: Printer, data: dict) -> Printer:
         printer.port = int(data["port"])
     if "https" in data:
         printer.https = _bool_value(data.get("https"), printer.https)
-    if "no_scanning" in data:
-        printer.no_scanning = _bool_value(data.get("no_scanning"), printer.no_scanning)
+    if "scanning" in data or "no_scanning" in data:
+        printer.scanning = _resolve_scanning(data, printer.scanning)
     if "token" in data:
         printer.token = data["token"]
     if "api_key" in data:
@@ -97,7 +131,7 @@ def printer_to_dict(printer: Printer) -> dict:
         "host": printer.host,
         "port": printer.port,
         "https": printer.https,
-        "no_scanning": printer.no_scanning,
+        "scanning": printer.scanning,
         "token": printer.token,
         "api_key": printer.api_key,
         "error_report_interval": printer.error_report_interval,

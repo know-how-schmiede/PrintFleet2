@@ -38,6 +38,38 @@
           Port
           <input type="number" id="printerPort" value="80" min="1" max="65535">
         </label>
+        <label>
+          Fehlerintervall (Sekunden)
+          <input type="number" id="printerErrorInterval" value="30" min="0" step="0.1">
+        </label>
+        <label>
+          Standort
+          <input type="text" id="printerLocation">
+        </label>
+        <label>
+          Druckertyp
+          <input type="text" id="printerType">
+        </label>
+        <label>
+          Token (Moonraker)
+          <input type="text" id="printerToken">
+        </label>
+        <label>
+          API-Schlüssel (OctoPrint)
+          <input type="text" id="printerApiKey">
+        </label>
+        <label>
+          Tasmota Host
+          <input type="text" id="printerTasmotaHost">
+        </label>
+        <label>
+          Tasmota Topic
+          <input type="text" id="printerTasmotaTopic">
+        </label>
+        <label class="full">
+          Notizen
+          <textarea id="printerNotes" rows="4"></textarea>
+        </label>
         <label class="checkbox">
           <input type="checkbox" id="printerHttps">
           HTTPS
@@ -47,8 +79,8 @@
           Enabled
         </label>
         <label class="checkbox">
-          <input type="checkbox" id="printerNoScan">
-          No scanning
+          <input type="checkbox" id="printerScanning" checked>
+          Scanning
         </label>
 
         <div class="form-actions">
@@ -70,15 +102,43 @@
               <th>Name</th>
               <th>Backend</th>
               <th>Host</th>
-              <th>Port</th>
-              <th>HTTPS</th>
               <th>Enabled</th>
+              <th>Scanning</th>
+              <th>Tasmota Host</th>
+              <th>Web UI</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody id="printerTable">
             <tr>
-              <td colspan="7" class="muted">No printers loaded yet.</td>
+              <td colspan="8" class="muted">No printers loaded yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="table-header">
+        <h3>Net Scan</h3>
+        <button class="btn soft" id="netScanButton" type="button">Net Scan</button>
+      </div>
+      <p class="muted">Scans the local network for OctoPrint, Moonraker, Elegoo Centurio Carbon, and Tasmota Steckdosen.</p>
+      <div id="netScanNotice" class="notice"></div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Host</th>
+              <th>Port</th>
+              <th>Name</th>
+              <th>Web UI</th>
+            </tr>
+          </thead>
+          <tbody id="netScanTable">
+            <tr>
+              <td colspan="5" class="muted">No scan run yet.</td>
             </tr>
           </tbody>
         </table>

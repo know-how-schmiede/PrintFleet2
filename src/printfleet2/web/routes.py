@@ -17,6 +17,7 @@ from printfleet2.services.settings_service import (
     settings_to_dict,
     update_settings,
 )
+from printfleet2.services.net_scan_service import scan_local_network
 from printfleet2.services.user_service import (
     create_user,
     get_user,
@@ -138,6 +139,11 @@ def get_printers():
     with session_scope() as session:
         printers = list_printers(session)
         return {"items": printers_to_dict(printers)}
+
+
+@bp.post("/api/net-scan")
+def net_scan():
+    return {"items": scan_local_network()}
 
 
 @bp.get("/api/printers/<int:printer_id>")

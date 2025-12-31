@@ -13,7 +13,7 @@ class Printer(Base):
     host: Mapped[str] = mapped_column(String, nullable=False)
     port: Mapped[int] = mapped_column(Integer, nullable=False)
     https: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
-    no_scanning: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    scanning: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
     token: Mapped[str | None] = mapped_column(String, nullable=True)
     api_key: Mapped[str | None] = mapped_column(String, nullable=True)
     error_report_interval: Mapped[float] = mapped_column(Float, nullable=False, server_default="30.0")

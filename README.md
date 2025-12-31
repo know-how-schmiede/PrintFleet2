@@ -15,7 +15,8 @@ Status: MVP in progress (users, printers, settings, Live-Wall).
 
 - Users with roles: SuperAdmin, Admin, User
 - Login required for all views except Live-Wall
-- Settings UI with Live-Wall stream configuration
+- Settings UI with Live-Wall stream configuration (collapsible stream sections)
+- Live-Wall printer layout controls (printers per row 1-5, data density: light/normal/all)
 - Printer management with active list on Live-Wall
 - Versioning file and changelog in docs
 

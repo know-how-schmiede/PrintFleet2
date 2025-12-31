@@ -1,5 +1,12 @@
 # PrintFleet2 Versions
 
+## 0.6.4 - 2025-12-31
+
+- Ergänzung Daten Printer
+- Anpassungen Tabelle "Configured printers"
+- Netzwerk-Scan Printer / Tasmota
+- "no scanning" -> "scanning"
+
 ## 0.6.3 - 2025-12-31
 
 - API JSON Button entfernen
