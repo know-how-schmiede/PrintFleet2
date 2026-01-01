@@ -64,6 +64,12 @@ fi
 
 chown -R "${SERVICE_USER}:${SERVICE_USER}" "$REPO_DIR"
 
+if ! runuser -u "$SERVICE_USER" -- test -x "$REPO_DIR"; then
+  echo "ERROR: Service user cannot access repo path: $REPO_DIR"
+  echo "Move the repo to a shared path (e.g. /opt/PrintFleet2) or use Service user=root."
+  exit 1
+fi
+
 echo "Creating virtual environment..."
 if [[ ! -d "$VENV_DIR" ]]; then
   runuser -u "$SERVICE_USER" -- python3 -m venv "$VENV_DIR"

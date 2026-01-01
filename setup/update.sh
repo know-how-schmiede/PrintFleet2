@@ -57,6 +57,12 @@ fi
 
 chown -R "${SERVICE_USER}:${SERVICE_USER}" "$REPO_DIR"
 
+if ! runuser -u "$SERVICE_USER" -- test -x "$REPO_DIR"; then
+  echo "ERROR: Service user cannot access repo path: $REPO_DIR"
+  echo "Move the repo to a shared path (e.g. /opt/PrintFleet2) or use Service user=root."
+  exit 1
+fi
+
 REQ_FILE=""
 if [[ -f "$REPO_DIR/requirements.txt" ]]; then
   REQ_FILE="$REPO_DIR/requirements.txt"

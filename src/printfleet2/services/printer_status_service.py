@@ -362,6 +362,55 @@ def _tasmota_status(printer: PrinterSnapshot) -> tuple[str, str]:
         return "Plug error", "muted"
 
 
+def _extract_tasmota_energy(payload: dict | None) -> tuple[float | None, float | None]:
+    if not isinstance(payload, dict):
+        return None, None
+
+    def read_energy(data: dict | None) -> tuple[float | None, float | None]:
+        if not isinstance(data, dict):
+            return None, None
+        energy = data.get("ENERGY")
+        if not isinstance(energy, dict):
+            return None, None
+        power = _coerce_temp(energy.get("Power"))
+        today = _coerce_temp(energy.get("Today"))
+        return power, today
+
+    for key in ("StatusSNS", "StatusSTS", "Status", "ENERGY"):
+        power, today = read_energy(payload if key == "ENERGY" else payload.get(key))
+        if power is not None or today is not None:
+            return power, today
+    return None, None
+
+
+def _tasmota_energy(printer: PrinterSnapshot) -> dict:
+    if not printer.tasmota_host:
+        return {"power_w": None, "today_wh": None, "error": "missing"}
+    base_url = _tasmota_base_url(printer.tasmota_host)
+    if not base_url:
+        return {"power_w": None, "today_wh": None, "error": "invalid"}
+    last_status = None
+    for command in ("Status%208", "Status%200"):
+        try:
+            url = f"{base_url}/cm?cmnd={command}"
+            status_code, payload = _fetch_json(url, {"User-Agent": USER_AGENT})
+            last_status = status_code
+            if status_code in {401, 403}:
+                return {"power_w": None, "today_wh": None, "error": "auth"}
+            if not payload or status_code is None:
+                continue
+            power, today_kwh = _extract_tasmota_energy(payload)
+            if power is None and today_kwh is None:
+                continue
+            today_wh = today_kwh * 1000 if today_kwh is not None else None
+            return {"power_w": power, "today_wh": today_wh, "error": None}
+        except Exception:
+            return {"power_w": None, "today_wh": None, "error": "error"}
+    if last_status is None:
+        return {"power_w": None, "today_wh": None, "error": "offline"}
+    return {"power_w": None, "today_wh": None, "error": "unavailable"}
+
+
 def get_printer_status(printer: PrinterSnapshot, include_plug: bool = True) -> dict:
     plug_label = None
     plug_state = None
@@ -445,3 +494,24 @@ def collect_plug_statuses(printers: Iterable[Printer | PrinterSnapshot]) -> dict
             except Exception:
                 status_map[printer_id] = {"plug_label": "Plug error", "plug_state": "muted"}
     return status_map
+
+
+def collect_plug_energy(printers: Iterable[Printer | PrinterSnapshot]) -> dict[int, dict]:
+    energy_map: dict[int, dict] = {}
+    snapshots = [
+        snapshot
+        for snapshot in build_printer_snapshots(printers)
+        if snapshot.tasmota_host
+    ]
+    if not snapshots:
+        return energy_map
+    max_workers = min(16, max(1, len(snapshots)))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(_tasmota_energy, printer): printer.id for printer in snapshots}
+        for future in concurrent.futures.as_completed(futures):
+            printer_id = futures[future]
+            try:
+                energy_map[printer_id] = future.result()
+            except Exception:
+                energy_map[printer_id] = {"power_w": None, "today_wh": None, "error": "error"}
+    return energy_map

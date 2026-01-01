@@ -207,6 +207,11 @@ document.addEventListener("DOMContentLoaded", () => {
   let printersCache = [];
   let sortState = { key: null, direction: "asc" };
   let netSortState = { key: null, direction: "asc" };
+  let plugEnergyCache = new Map();
+  let plugEnergyLoaded = false;
+  let tasmotaTooltip = null;
+  let tasmotaTooltipAnchor = null;
+  let tasmotaTooltipPointer = { x: 0, y: 0 };
 
   function sortValue(printer, key) {
     if (!printer) {
@@ -261,6 +266,129 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function formatPowerValue(value) {
+    if (!Number.isFinite(value)) {
+      return null;
+    }
+    return value.toLocaleString("de-DE", { maximumFractionDigits: 1 });
+  }
+
+  function formatEnergyValue(value) {
+    if (!Number.isFinite(value)) {
+      return null;
+    }
+    return Math.round(value).toLocaleString("de-DE");
+  }
+
+  function ensureTasmotaTooltip() {
+    if (tasmotaTooltip) {
+      return;
+    }
+    tasmotaTooltip = document.createElement("div");
+    tasmotaTooltip.className = "tasmota-tooltip";
+    document.body.appendChild(tasmotaTooltip);
+  }
+
+  function updateTasmotaTooltipPosition(pointer) {
+    if (!tasmotaTooltip) {
+      return;
+    }
+    const padding = 12;
+    const viewportPadding = 8;
+    const rect = tasmotaTooltip.getBoundingClientRect();
+    let x = pointer.x + padding;
+    let y = pointer.y + padding;
+    if (x + rect.width > window.innerWidth - viewportPadding) {
+      x = window.innerWidth - rect.width - viewportPadding;
+    }
+    if (y + rect.height > window.innerHeight - viewportPadding) {
+      y = window.innerHeight - rect.height - viewportPadding;
+    }
+    tasmotaTooltip.style.left = `${Math.max(viewportPadding, x)}px`;
+    tasmotaTooltip.style.top = `${Math.max(viewportPadding, y)}px`;
+  }
+
+  function showTasmotaTooltip(element, pointer) {
+    ensureTasmotaTooltip();
+    const text = element.dataset.tasmotaHint || "";
+    if (!text) {
+      hideTasmotaTooltip();
+      return;
+    }
+    tasmotaTooltip.textContent = text;
+    tasmotaTooltip.classList.add("is-visible");
+    tasmotaTooltipAnchor = element;
+    tasmotaTooltipPointer = pointer;
+    updateTasmotaTooltipPosition(pointer);
+  }
+
+  function hideTasmotaTooltip() {
+    if (!tasmotaTooltip) {
+      return;
+    }
+    tasmotaTooltip.classList.remove("is-visible");
+    tasmotaTooltip.textContent = "";
+    tasmotaTooltipAnchor = null;
+  }
+
+  function refreshTasmotaTooltip() {
+    if (!tasmotaTooltip || !tasmotaTooltipAnchor) {
+      return;
+    }
+    const text = tasmotaTooltipAnchor.dataset.tasmotaHint || "";
+    if (!text) {
+      hideTasmotaTooltip();
+      return;
+    }
+    tasmotaTooltip.textContent = text;
+    updateTasmotaTooltipPosition(tasmotaTooltipPointer);
+  }
+
+  function buildTasmotaHint(printerId) {
+    if (!plugEnergyLoaded) {
+      return "Energiedaten werden geladen...";
+    }
+    const entry = plugEnergyCache.get(printerId);
+    if (!entry || entry.error) {
+      return "Energiedaten nicht verfuegbar";
+    }
+    const lines = [];
+    const power = formatPowerValue(entry.power_w);
+    if (power !== null) {
+      lines.push(`Leistung aktuell: ${power} W`);
+    }
+    const today = formatEnergyValue(entry.today_wh);
+    if (today !== null) {
+      lines.push(`Heute: ${today} Wh`);
+    }
+    return lines.length ? lines.join("\n") : "Energiedaten nicht verfuegbar";
+  }
+
+  function applyTasmotaHints() {
+    document.querySelectorAll("[data-tasmota-id]").forEach((element) => {
+      const id = Number(element.dataset.tasmotaId);
+      if (!Number.isFinite(id)) {
+        return;
+      }
+      const hint = buildTasmotaHint(id);
+      element.removeAttribute("title");
+      element.dataset.tasmotaHint = hint;
+      element.setAttribute("aria-label", hint);
+      if (!element.dataset.tasmotaBound) {
+        element.dataset.tasmotaBound = "true";
+        element.addEventListener("mouseenter", (event) => {
+          showTasmotaTooltip(element, { x: event.clientX, y: event.clientY });
+        });
+        element.addEventListener("mousemove", (event) => {
+          tasmotaTooltipPointer = { x: event.clientX, y: event.clientY };
+          updateTasmotaTooltipPosition(tasmotaTooltipPointer);
+        });
+        element.addEventListener("mouseleave", hideTasmotaTooltip);
+      }
+    });
+    refreshTasmotaTooltip();
+  }
+
   function renderPrinterTable(items) {
     const table = document.getElementById("printerTable");
     table.innerHTML = "";
@@ -282,7 +410,11 @@ document.addEventListener("DOMContentLoaded", () => {
         <td>${printer.host}</td>
         <td>${printer.enabled ? "Yes" : "No"}</td>
         <td>${printer.scanning ? "Yes" : "No"}</td>
-        <td>${printer.tasmota_host ? printer.tasmota_host : "-"}</td>
+        <td>${
+          printer.tasmota_host
+            ? `<span class="tasmota-host" data-tasmota-id="${printer.id}">${printer.tasmota_host}</span>`
+            : "-"
+        }</td>
         <td>${webUrl ? `<a class="btn small outline" href="${webUrl}" target="_blank" rel="noopener">Open</a>` : "-"}</td>
         <td>
           <button class="btn small" data-action="edit" type="button">Edit</button>
@@ -309,6 +441,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       table.appendChild(row);
     });
+    applyTasmotaHints();
   }
 
   function resolveNetScanType(device) {
@@ -503,6 +636,37 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     printersCache = data.items || [];
     renderPrinterTable(sortedPrinters(printersCache));
+    loadPlugEnergy();
+  }
+
+  async function loadPlugEnergy() {
+    const hasTasmota = printersCache.some((printer) => printer.tasmota_host);
+    plugEnergyCache = new Map();
+    plugEnergyLoaded = false;
+    applyTasmotaHints();
+    if (!hasTasmota) {
+      plugEnergyLoaded = true;
+      applyTasmotaHints();
+      return;
+    }
+    try {
+      const res = await fetch("/api/printers/plug-energy", { cache: "no-store" });
+      if (!res.ok) {
+        throw new Error("plug-energy-failed");
+      }
+      const data = await res.json().catch(() => ({}));
+      const items = Array.isArray(data.items) ? data.items : [];
+      plugEnergyCache = new Map(
+        items
+          .filter((item) => item && Number.isFinite(Number(item.id)))
+          .map((item) => [Number(item.id), item])
+      );
+    } catch (error) {
+      plugEnergyCache = new Map();
+    } finally {
+      plugEnergyLoaded = true;
+      applyTasmotaHints();
+    }
   }
 
   form.addEventListener("submit", async (event) => {

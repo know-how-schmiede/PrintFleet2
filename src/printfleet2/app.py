@@ -37,6 +37,7 @@ def create_app() -> Flask:
             "web.live_wall_page",
             "web.live_wall_status",
             "web.live_wall_plug_status",
+            "web.printers_plug_energy",
         }
 
         with session_scope() as db_session:

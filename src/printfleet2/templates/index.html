@@ -31,6 +31,14 @@
           <span class="metric-label">Active errors</span>
           <span class="metric-value" id="activeErrorsCount">{{ snapshot.active_errors if snapshot else "--" }}</span>
         </div>
+        <div class="metric">
+          <span class="metric-label">Aktuelle Leistung in W</span>
+          <span class="metric-value" id="totalPowerNow">--</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Heutiger Verbrauch in KWh</span>
+          <span class="metric-value" id="totalEnergyToday">--</span>
+        </div>
       </div>
     </div>
   </section>
@@ -79,11 +87,15 @@
         if (!res.ok) {
           return null;
         }
-        const contentType = res.headers.get("content-type") || "";
-        if (!contentType.includes("application/json")) {
+        const text = await res.text();
+        if (!text) {
           return null;
         }
-        return await res.json();
+        try {
+          return JSON.parse(text);
+        } catch (error) {
+          return null;
+        }
       } catch (error) {
         return null;
       }
@@ -120,10 +132,18 @@
       return false;
     }
 
+    function formatMetricValue(value, options = {}) {
+      if (!Number.isFinite(value)) {
+        return "--";
+      }
+      return value.toLocaleString("de-DE", options);
+    }
+
     async function loadLiveSnapshot() {
-      const [printersData, statusData] = await Promise.all([
+      const [printersData, statusData, energyData] = await Promise.all([
         fetchJson("/api/printers"),
         fetchJson("/api/live-wall/status", { cache: "no-store" }),
+        fetchJson("/api/printers/plug-energy", { cache: "no-store" }),
       ]);
 
       const printers = (printersData && printersData.items) || [];
@@ -137,7 +157,7 @@
       list.innerHTML = "";
       const listItems = activePrinters.length ? activePrinters : statuses;
       if (!listItems.length) {
-        list.innerHTML = "<li class=\\"muted\\">No active printers loaded yet.</li>";
+        list.innerHTML = "<li class=\"muted\">No active printers loaded yet.</li>";
       } else {
         listItems.forEach((printer) => {
           const li = document.createElement("li");
@@ -152,6 +172,33 @@
         document.getElementById("activePrintsCount").textContent = activePrints;
         document.getElementById("activeErrorsCount").textContent = activeErrors;
       }
+
+      const energyItems = (energyData && Array.isArray(energyData.items)) ? energyData.items : [];
+      let totalPower = 0;
+      let powerCount = 0;
+      let totalEnergyWh = 0;
+      let energyCount = 0;
+      energyItems.forEach((item) => {
+        if (!item) {
+          return;
+        }
+        const power = Number(item.power_w);
+        if (Number.isFinite(power)) {
+          totalPower += power;
+          powerCount += 1;
+        }
+        const todayWh = Number(item.today_wh);
+        if (Number.isFinite(todayWh)) {
+          totalEnergyWh += todayWh;
+          energyCount += 1;
+        }
+      });
+      document.getElementById("totalPowerNow").textContent = powerCount
+        ? formatMetricValue(totalPower, { maximumFractionDigits: 1 })
+        : "--";
+      document.getElementById("totalEnergyToday").textContent = energyCount
+        ? formatMetricValue(totalEnergyWh / 1000, { maximumFractionDigits: 2 })
+        : "--";
     }
 
     function scheduleLiveSnapshot() {

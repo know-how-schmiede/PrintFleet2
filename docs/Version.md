@@ -1,5 +1,10 @@
 # PrintFleet2 Versions
 
+## 0.6.9 - 2026-1-1
+
+- aktuelle Leistung und heute verbrauchte Leistung in Wh als ToolTip auf IP-Adresse TasmotaSteckdose
+
+
 ## 0.6.8 - 2026-1-1
 
 - Net Scan Filter (type)

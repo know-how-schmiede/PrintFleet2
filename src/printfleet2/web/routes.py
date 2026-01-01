@@ -16,6 +16,7 @@ from printfleet2.services.printer_service import (
 )
 from printfleet2.services.printer_status_service import (
     build_printer_snapshots,
+    collect_plug_energy,
     collect_plug_statuses,
     collect_printer_statuses,
 )
@@ -488,6 +489,28 @@ def live_wall_plug_status():
     return {"items": items}
 
 
+@bp.get("/api/printers/plug-energy")
+def printers_plug_energy():
+    with session_scope() as session:
+        printers = list_printers(session)
+        snapshots = build_printer_snapshots(printers)
+    energy_map = collect_plug_energy(snapshots)
+    items = []
+    for printer in snapshots:
+        if not printer.tasmota_host:
+            continue
+        energy = energy_map.get(printer.id, {})
+        items.append(
+            {
+                "id": printer.id,
+                "power_w": energy.get("power_w"),
+                "today_wh": energy.get("today_wh"),
+                "error": energy.get("error"),
+            }
+        )
+    return {"items": items}
+
+
 @bp.post("/api/net-scan")
 def net_scan():
     return {"items": scan_local_network(), "scanned_at": datetime.now(timezone.utc).isoformat()}
@@ -760,6 +783,7 @@ def api_docs():
             {"method": "PATCH", "path": "/api/settings"},
             {"method": "GET", "path": "/api/live-wall/status"},
             {"method": "GET", "path": "/api/live-wall/plug-status"},
+            {"method": "GET", "path": "/api/printers/plug-energy"},
             {"method": "GET", "path": "/api/printers"},
             {"method": "POST", "path": "/api/printers"},
             {"method": "GET", "path": "/api/printers/{id}"},
