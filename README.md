@@ -18,6 +18,10 @@ Status: MVP in progress (users, printers, settings, Live-Wall).
 - Settings UI with Live-Wall stream configuration (collapsible stream sections)
 - Live-Wall printer layout controls (printers per row 1-5, data density: light/normal/all)
 - Printer management with active list on Live-Wall
+- Live-Wall status and plug status JSON feeds for external displays
+- Network scan API endpoint to discover devices on the local subnet
+- User import/export API endpoints for migration and backups
+- API docs page at `/docs` plus JSON listing at `/api/docs`
 - Versioning file and changelog in docs
 
 ## Project layout

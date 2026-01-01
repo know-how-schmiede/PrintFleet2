@@ -43,6 +43,36 @@ If activation is blocked:
 Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 ```
 
+## Windows PowerShell: FFmpeg for RTSP testing (optional)
+
+Install FFmpeg so you can verify RTSP streams locally without a Debian LXC.
+
+Option A: winget (recommended on Windows 10/11)
+
+```powershell
+winget install --id Gyan.FFmpeg -e
+```
+
+Close and reopen PowerShell, then verify:
+
+```powershell
+ffmpeg -version
+ffplay -version
+```
+
+Test a stream (press `q` to quit):
+
+```powershell
+ffplay -fflags nobuffer -flags low_delay -rtsp_transport tcp rtsp://USER:PASS@HOST:554/stream1
+```
+
+Option B: manual install
+
+- Download the "ffmpeg-release-essentials.zip" build from https://www.gyan.dev/ffmpeg/builds/
+- Unzip to a folder (for example `C:\tools\ffmpeg`)
+- Add `C:\tools\ffmpeg\bin` to your user PATH
+- Reopen PowerShell and run `ffmpeg -version`
+
 ## 3) Run the dev server (scaffold only)
 
 ```bash

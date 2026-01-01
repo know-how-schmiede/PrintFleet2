@@ -60,25 +60,46 @@ def stream_type_for_url(url: str) -> str:
 def build_live_wall_config(settings: dict) -> dict:
     streams: list[dict] = []
 
-    def add_stream(url: str | None, label: str) -> None:
-        if not url:
+    def add_stream(url: str | None, label: str, active: bool = True, title: str | None = None) -> None:
+        if not active or not url:
             return
         url = url.strip()
         if not url:
             return
+        title_value = title.strip() if isinstance(title, str) else ""
+        label_value = title_value or label
         streams.append(
             {
-                "label": label,
+                "label": label_value,
                 "url": url,
                 "type": stream_type_for_url(url),
             }
         )
 
-    add_stream(settings.get("kiosk_stream_url"), "Main stream")
-    add_stream(settings.get("kiosk_stream_url_1"), "Stream 1")
-    add_stream(settings.get("kiosk_stream_url_2"), "Stream 2")
-    add_stream(settings.get("kiosk_stream_url_3"), "Stream 3")
-    add_stream(settings.get("kiosk_stream_url_4"), "Stream 4")
+    add_stream(
+        settings.get("kiosk_stream_url_1"),
+        "Stream 1",
+        settings.get("kiosk_stream_active_1", True),
+        settings.get("kiosk_stream_title_1"),
+    )
+    add_stream(
+        settings.get("kiosk_stream_url_2"),
+        "Stream 2",
+        settings.get("kiosk_stream_active_2", True),
+        settings.get("kiosk_stream_title_2"),
+    )
+    add_stream(
+        settings.get("kiosk_stream_url_3"),
+        "Stream 3",
+        settings.get("kiosk_stream_active_3", True),
+        settings.get("kiosk_stream_title_3"),
+    )
+    add_stream(
+        settings.get("kiosk_stream_url_4"),
+        "Stream 4",
+        settings.get("kiosk_stream_active_4", True),
+        settings.get("kiosk_stream_title_4"),
+    )
 
     poll_interval = settings.get("poll_interval")
     try:

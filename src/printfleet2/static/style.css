@@ -289,6 +289,18 @@ body {
 }
 
 .stream-section .form-grid .stream-url {
+  grid-column: span 2;
+}
+
+.stream-section .form-grid .stream-generated {
+  grid-column: span 2;
+}
+
+.stream-section .form-grid .stream-title {
+  grid-column: span 2;
+}
+
+.stream-section .form-grid .stream-active {
   grid-column: 1 / -1;
 }
 
@@ -296,6 +308,16 @@ body {
   grid-column: 1 / -1;
   justify-self: start;
   width: min(260px, 100%);
+}
+
+.stream-generated input[readonly] {
+  background: rgba(15, 23, 42, 0.04);
+  color: var(--muted);
+}
+
+.hint {
+  font-size: 0.8rem;
+  line-height: 1.3;
 }
 
 .printer-layout-select {
@@ -471,14 +493,14 @@ label.checkbox input {
 
 .live-wall-grid {
   display: grid;
-  gap: 18px;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 5px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .live-wall-grid.layout-standard .live-wall-tile:first-child,
 .live-wall-grid.layout-focus .live-wall-tile:first-child {
-  grid-column: span 2;
-  grid-row: span 2;
+  grid-column: span 1;
+  grid-row: span 1;
 }
 
 .live-wall-tile {
@@ -494,10 +516,13 @@ label.checkbox input {
   position: relative;
   background: #0b1120;
   aspect-ratio: 16 / 9;
+  overflow: hidden;
 }
 
 .live-wall-frame iframe,
 .live-wall-frame img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   border: 0;
@@ -654,5 +679,11 @@ label.checkbox input {
   .live-wall-grid.layout-focus .live-wall-tile:first-child {
     grid-column: span 1;
     grid-row: span 1;
+  }
+
+  .stream-section .form-grid .stream-url,
+  .stream-section .form-grid .stream-generated,
+  .stream-section .form-grid .stream-title {
+    grid-column: 1 / -1;
   }
 }

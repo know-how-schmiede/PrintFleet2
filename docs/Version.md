@@ -1,5 +1,13 @@
 # PrintFleet2 Versions
 
+## 0.6.7 - 2026-1-1
+
+- Update Dokumentation API endpoints
+- Streams URL zusammenbauen
+- Layout Streams auf Live-Wall
+- Stream active Feld
+- VideoStream Größe einstellen
+
 ## 0.6.6 - 2025-12-31
 
 - Live snapshot Aktualisierung auf Homepage
@@ -31,7 +39,8 @@
 
 ## 0.6.2 - 2025-12-30
 
-Theme (light + dark), Settings auswählbar
+- Theme (light + dark)
+- Settings auswählbar
 
 ## 0.6.1 - 2025-12-30
 

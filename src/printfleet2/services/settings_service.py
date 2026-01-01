@@ -18,6 +18,22 @@ def ensure_settings_schema(session: Session) -> None:
         missing["live_wall_printer_data"] = "TEXT"
     if "live_wall_plug_poll_interval" not in columns:
         missing["live_wall_plug_poll_interval"] = "REAL"
+    if "kiosk_stream_active_1" not in columns:
+        missing["kiosk_stream_active_1"] = "INTEGER DEFAULT 1"
+    if "kiosk_stream_active_2" not in columns:
+        missing["kiosk_stream_active_2"] = "INTEGER DEFAULT 1"
+    if "kiosk_stream_active_3" not in columns:
+        missing["kiosk_stream_active_3"] = "INTEGER DEFAULT 1"
+    if "kiosk_stream_active_4" not in columns:
+        missing["kiosk_stream_active_4"] = "INTEGER DEFAULT 1"
+    if "kiosk_stream_title_1" not in columns:
+        missing["kiosk_stream_title_1"] = "TEXT"
+    if "kiosk_stream_title_2" not in columns:
+        missing["kiosk_stream_title_2"] = "TEXT"
+    if "kiosk_stream_title_3" not in columns:
+        missing["kiosk_stream_title_3"] = "TEXT"
+    if "kiosk_stream_title_4" not in columns:
+        missing["kiosk_stream_title_4"] = "TEXT"
     if not missing:
         return
     try:
@@ -26,6 +42,14 @@ def ensure_settings_schema(session: Session) -> None:
                 conn.execute(text(f"ALTER TABLE settings ADD COLUMN {column_name} {column_type}"))
             if "live_wall_plug_poll_interval" in missing:
                 conn.execute(text("UPDATE settings SET live_wall_plug_poll_interval = 5.0"))
+            for active_column in (
+                "kiosk_stream_active_1",
+                "kiosk_stream_active_2",
+                "kiosk_stream_active_3",
+                "kiosk_stream_active_4",
+            ):
+                if active_column in missing:
+                    conn.execute(text(f"UPDATE settings SET {active_column} = 1"))
     except Exception:
         return
 
@@ -63,6 +87,16 @@ def normalize_plug_poll_interval(value: object | None) -> float | None:
     return parsed
 
 
+def normalize_stream_active(value: object | None, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def ensure_settings_row(session: Session) -> Settings:
     ensure_settings_schema(session)
     settings = session.get(Settings, 1)
@@ -77,6 +111,10 @@ def ensure_settings_row(session: Session) -> Settings:
             live_wall_printer_columns=3,
             live_wall_printer_data="normal",
             live_wall_plug_poll_interval=5.0,
+            kiosk_stream_active_1=True,
+            kiosk_stream_active_2=True,
+            kiosk_stream_active_3=True,
+            kiosk_stream_active_4=True,
         )
         session.add(settings)
     return settings
@@ -104,18 +142,26 @@ def settings_to_dict(settings: Settings) -> dict:
         "kiosk_camera_host_1": settings.kiosk_camera_host_1,
         "kiosk_camera_user_1": settings.kiosk_camera_user_1,
         "kiosk_camera_password_1": settings.kiosk_camera_password_1,
+        "kiosk_stream_active_1": normalize_stream_active(settings.kiosk_stream_active_1, default=True),
+        "kiosk_stream_title_1": settings.kiosk_stream_title_1,
         "kiosk_stream_url_2": settings.kiosk_stream_url_2,
         "kiosk_camera_host_2": settings.kiosk_camera_host_2,
         "kiosk_camera_user_2": settings.kiosk_camera_user_2,
         "kiosk_camera_password_2": settings.kiosk_camera_password_2,
+        "kiosk_stream_active_2": normalize_stream_active(settings.kiosk_stream_active_2, default=True),
+        "kiosk_stream_title_2": settings.kiosk_stream_title_2,
         "kiosk_stream_url_3": settings.kiosk_stream_url_3,
         "kiosk_camera_host_3": settings.kiosk_camera_host_3,
         "kiosk_camera_user_3": settings.kiosk_camera_user_3,
         "kiosk_camera_password_3": settings.kiosk_camera_password_3,
+        "kiosk_stream_active_3": normalize_stream_active(settings.kiosk_stream_active_3, default=True),
+        "kiosk_stream_title_3": settings.kiosk_stream_title_3,
         "kiosk_stream_url_4": settings.kiosk_stream_url_4,
         "kiosk_camera_host_4": settings.kiosk_camera_host_4,
         "kiosk_camera_user_4": settings.kiosk_camera_user_4,
         "kiosk_camera_password_4": settings.kiosk_camera_password_4,
+        "kiosk_stream_active_4": normalize_stream_active(settings.kiosk_stream_active_4, default=True),
+        "kiosk_stream_title_4": settings.kiosk_stream_title_4,
     }
 
 
@@ -137,18 +183,26 @@ def update_settings(settings: Settings, data: dict) -> Settings:
         "kiosk_camera_host_1",
         "kiosk_camera_user_1",
         "kiosk_camera_password_1",
+        "kiosk_stream_active_1",
+        "kiosk_stream_title_1",
         "kiosk_stream_url_2",
         "kiosk_camera_host_2",
         "kiosk_camera_user_2",
         "kiosk_camera_password_2",
+        "kiosk_stream_active_2",
+        "kiosk_stream_title_2",
         "kiosk_stream_url_3",
         "kiosk_camera_host_3",
         "kiosk_camera_user_3",
         "kiosk_camera_password_3",
+        "kiosk_stream_active_3",
+        "kiosk_stream_title_3",
         "kiosk_stream_url_4",
         "kiosk_camera_host_4",
         "kiosk_camera_user_4",
         "kiosk_camera_password_4",
+        "kiosk_stream_active_4",
+        "kiosk_stream_title_4",
         "live_wall_printer_columns",
         "live_wall_printer_data",
         "live_wall_plug_poll_interval",
@@ -167,4 +221,12 @@ def update_settings(settings: Settings, data: dict) -> Settings:
         settings.live_wall_plug_poll_interval = normalize_plug_poll_interval(
             settings.live_wall_plug_poll_interval
         )
+    for field in (
+        "kiosk_stream_active_1",
+        "kiosk_stream_active_2",
+        "kiosk_stream_active_3",
+        "kiosk_stream_active_4",
+    ):
+        if field in data:
+            setattr(settings, field, normalize_stream_active(getattr(settings, field)))
     return settings

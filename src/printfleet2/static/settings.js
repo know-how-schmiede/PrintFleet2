@@ -27,18 +27,26 @@ document.addEventListener("DOMContentLoaded", () => {
     kiosk_camera_host_1: "settingKioskCameraHost1",
     kiosk_camera_user_1: "settingKioskCameraUser1",
     kiosk_camera_password_1: "settingKioskCameraPassword1",
+    kiosk_stream_active_1: "settingKioskStreamActive1",
+    kiosk_stream_title_1: "settingKioskStreamTitle1",
     kiosk_stream_url_2: "settingKioskStreamUrl2",
     kiosk_camera_host_2: "settingKioskCameraHost2",
     kiosk_camera_user_2: "settingKioskCameraUser2",
     kiosk_camera_password_2: "settingKioskCameraPassword2",
+    kiosk_stream_active_2: "settingKioskStreamActive2",
+    kiosk_stream_title_2: "settingKioskStreamTitle2",
     kiosk_stream_url_3: "settingKioskStreamUrl3",
     kiosk_camera_host_3: "settingKioskCameraHost3",
     kiosk_camera_user_3: "settingKioskCameraUser3",
     kiosk_camera_password_3: "settingKioskCameraPassword3",
+    kiosk_stream_active_3: "settingKioskStreamActive3",
+    kiosk_stream_title_3: "settingKioskStreamTitle3",
     kiosk_stream_url_4: "settingKioskStreamUrl4",
     kiosk_camera_host_4: "settingKioskCameraHost4",
     kiosk_camera_user_4: "settingKioskCameraUser4",
     kiosk_camera_password_4: "settingKioskCameraPassword4",
+    kiosk_stream_active_4: "settingKioskStreamActive4",
+    kiosk_stream_title_4: "settingKioskStreamTitle4",
     live_wall_printer_columns: "settingLiveWallPrinterColumns",
     live_wall_printer_data: "settingLiveWallPrinterData",
     live_wall_plug_poll_interval: "settingLiveWallPlugPollInterval",
@@ -51,6 +59,36 @@ document.addEventListener("DOMContentLoaded", () => {
   const numericBounds = {
     live_wall_plug_poll_interval: { min: 1, max: 300 },
   };
+  const rtspStreams = [
+    {
+      index: 1,
+      hostId: "settingKioskCameraHost1",
+      userId: "settingKioskCameraUser1",
+      passwordId: "settingKioskCameraPassword1",
+      outputId: "settingKioskGeneratedRtsp1",
+    },
+    {
+      index: 2,
+      hostId: "settingKioskCameraHost2",
+      userId: "settingKioskCameraUser2",
+      passwordId: "settingKioskCameraPassword2",
+      outputId: "settingKioskGeneratedRtsp2",
+    },
+    {
+      index: 3,
+      hostId: "settingKioskCameraHost3",
+      userId: "settingKioskCameraUser3",
+      passwordId: "settingKioskCameraPassword3",
+      outputId: "settingKioskGeneratedRtsp3",
+    },
+    {
+      index: 4,
+      hostId: "settingKioskCameraHost4",
+      userId: "settingKioskCameraUser4",
+      passwordId: "settingKioskCameraPassword4",
+      outputId: "settingKioskGeneratedRtsp4",
+    },
+  ];
 
   function setNotice(message, type) {
     notice.textContent = message;
@@ -63,6 +101,10 @@ document.addEventListener("DOMContentLoaded", () => {
   function setFieldValue(fieldId, value) {
     const field = document.getElementById(fieldId);
     if (!field) {
+      return;
+    }
+    if (field.type === "checkbox") {
+      field.checked = value === true || value === "true" || value === 1 || value === "1";
       return;
     }
     if (fieldId === "settingLiveWallPrinterColumns" && (value === null || value === undefined || value === "")) {
@@ -78,6 +120,65 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     field.value = value ?? "";
+  }
+
+  function readFieldValue(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (!field) {
+      return "";
+    }
+    return (field.value || "").trim();
+  }
+
+  function normalizeRtspHost(raw) {
+    if (!raw) {
+      return "";
+    }
+    let host = raw.trim();
+    host = host.replace(/^rtsp:\/\//i, "");
+    host = host.replace(/\/.*$/, "");
+    if (/^\[.*\](?::\d+)?$/.test(host)) {
+      if (/:\d+$/.test(host)) {
+        return host;
+      }
+      return `${host}:554`;
+    }
+    if (/:\d+$/.test(host)) {
+      return host;
+    }
+    return `${host}:554`;
+  }
+
+  function buildRtspUrl({ index, hostId, userId, passwordId }) {
+    const host = normalizeRtspHost(readFieldValue(hostId));
+    const user = readFieldValue(userId);
+    const password = readFieldValue(passwordId);
+    if (!host || !user || !password) {
+      return "";
+    }
+    return `rtsp://${user}:${password}@${host}/stream${index}`;
+  }
+
+  function updateGeneratedRtspFields() {
+    rtspStreams.forEach((stream) => {
+      const output = document.getElementById(stream.outputId);
+      if (!output) {
+        return;
+      }
+      output.value = buildRtspUrl(stream);
+    });
+  }
+
+  function bindRtspListeners() {
+    rtspStreams.forEach((stream) => {
+      [stream.hostId, stream.userId, stream.passwordId].forEach((fieldId) => {
+        const field = document.getElementById(fieldId);
+        if (!field) {
+          return;
+        }
+        field.addEventListener("input", updateGeneratedRtspFields);
+      });
+    });
   }
 
   function downloadJson(filename, payload) {
@@ -119,6 +220,7 @@ document.addEventListener("DOMContentLoaded", () => {
     Object.entries(fields).forEach(([key, fieldId]) => {
       setFieldValue(fieldId, data[key]);
     });
+    updateGeneratedRtspFields();
   }
 
   function buildPayload() {
@@ -126,6 +228,10 @@ document.addEventListener("DOMContentLoaded", () => {
     for (const [key, fieldId] of Object.entries(fields)) {
       const field = document.getElementById(fieldId);
       if (!field) {
+        continue;
+      }
+      if (field.type === "checkbox") {
+        payload[key] = field.checked;
         continue;
       }
       const rawValue = field.value;
@@ -186,6 +292,7 @@ document.addEventListener("DOMContentLoaded", () => {
         applied += 1;
       }
     });
+    updateGeneratedRtspFields();
     return applied;
   }
 
@@ -212,6 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
         setFieldValue(fieldId, data[key]);
       }
     });
+    updateGeneratedRtspFields();
     setNotice("Settings saved.", "success");
   });
 
@@ -300,5 +408,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  bindRtspListeners();
   loadSettings();
 });

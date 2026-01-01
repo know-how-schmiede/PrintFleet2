@@ -1,4 +1,4 @@
-from sqlalchemy import CheckConstraint, Float, Integer, String, Text
+from sqlalchemy import Boolean, CheckConstraint, Float, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from printfleet2.db.base import Base
@@ -30,15 +30,23 @@ class Settings(Base):
     kiosk_camera_host_1: Mapped[str | None] = mapped_column(String, nullable=True)
     kiosk_camera_user_1: Mapped[str | None] = mapped_column(String, nullable=True)
     kiosk_camera_password_1: Mapped[str | None] = mapped_column(String, nullable=True)
+    kiosk_stream_active_1: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
+    kiosk_stream_title_1: Mapped[str | None] = mapped_column(String, nullable=True)
     kiosk_stream_url_2: Mapped[str | None] = mapped_column(String, nullable=True)
     kiosk_camera_host_2: Mapped[str | None] = mapped_column(String, nullable=True)
     kiosk_camera_user_2: Mapped[str | None] = mapped_column(String, nullable=True)
     kiosk_camera_password_2: Mapped[str | None] = mapped_column(String, nullable=True)
+    kiosk_stream_active_2: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
+    kiosk_stream_title_2: Mapped[str | None] = mapped_column(String, nullable=True)
     kiosk_stream_url_3: Mapped[str | None] = mapped_column(String, nullable=True)
     kiosk_camera_host_3: Mapped[str | None] = mapped_column(String, nullable=True)
     kiosk_camera_user_3: Mapped[str | None] = mapped_column(String, nullable=True)
     kiosk_camera_password_3: Mapped[str | None] = mapped_column(String, nullable=True)
+    kiosk_stream_active_3: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
+    kiosk_stream_title_3: Mapped[str | None] = mapped_column(String, nullable=True)
     kiosk_stream_url_4: Mapped[str | None] = mapped_column(String, nullable=True)
     kiosk_camera_host_4: Mapped[str | None] = mapped_column(String, nullable=True)
     kiosk_camera_user_4: Mapped[str | None] = mapped_column(String, nullable=True)
     kiosk_camera_password_4: Mapped[str | None] = mapped_column(String, nullable=True)
+    kiosk_stream_active_4: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
+    kiosk_stream_title_4: Mapped[str | None] = mapped_column(String, nullable=True)

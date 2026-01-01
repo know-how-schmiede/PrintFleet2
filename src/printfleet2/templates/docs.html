@@ -20,6 +20,21 @@
     </div>
 
     <div class="card stack">
+      <h3>Live-Wall</h3>
+      <ul class="list">
+        <li><code>GET /api/live-wall/status</code></li>
+        <li><code>GET /api/live-wall/plug-status</code></li>
+      </ul>
+    </div>
+
+    <div class="card stack">
+      <h3>Network scan</h3>
+      <ul class="list">
+        <li><code>POST /api/net-scan</code></li>
+      </ul>
+    </div>
+
+    <div class="card stack">
       <h3>Printers</h3>
       <ul class="list">
         <li><code>GET /api/printers</code></li>
@@ -35,8 +50,13 @@
       <h3>Users & auth</h3>
       <ul class="list">
         <li><code>GET /api/users</code></li>
+        <li><code>GET /api/users/export</code></li>
+        <li><code>POST /api/users/import</code></li>
         <li><code>POST /api/users</code></li>
         <li><code>GET /api/users/{id}</code></li>
+        <li><code>PUT /api/users/{id}</code></li>
+        <li><code>PATCH /api/users/{id}</code></li>
+        <li><code>DELETE /api/users/{id}</code></li>
         <li><code>POST /api/auth/login</code></li>
         <li><code>POST /api/auth/logout</code></li>
         <li><code>GET /api/auth/me</code></li>
