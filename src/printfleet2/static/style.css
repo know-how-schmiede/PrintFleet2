@@ -414,6 +414,42 @@ label.checkbox input {
   flex-wrap: wrap;
 }
 
+.sort-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sort-button::after {
+  content: " ^v";
+  font-size: 0.75em;
+  color: var(--muted);
+}
+
+.sort-button[data-direction="asc"]::after {
+  content: " ^";
+  color: var(--accent);
+}
+
+.sort-button[data-direction="desc"]::after {
+  content: " v";
+  color: var(--accent);
+}
+
+.net-scan-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
 .btn.small {
   padding: 6px 10px;
   font-size: 0.85rem;

@@ -104,12 +104,12 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>Name</th>
+              <th><button class="sort-button" type="button" data-sort="name">Name</button></th>
               <th>Backend</th>
-              <th>Host</th>
-              <th>Enabled</th>
-              <th>Scanning</th>
-              <th>Tasmota Host</th>
+              <th><button class="sort-button" type="button" data-sort="host">Host</button></th>
+              <th><button class="sort-button" type="button" data-sort="enabled">Enabled</button></th>
+              <th><button class="sort-button" type="button" data-sort="scanning">Scanning</button></th>
+              <th><button class="sort-button" type="button" data-sort="tasmota_host">Tasmota Host</button></th>
               <th>Web UI</th>
               <th>Actions</th>
             </tr>
@@ -126,9 +126,32 @@
     <div class="card">
       <div class="table-header">
         <h3>Net Scan</h3>
-        <button class="btn soft" id="netScanButton" type="button">Net Scan</button>
+        <div class="table-actions">
+          <button class="btn soft" id="netScanButton" type="button">Net Scan</button>
+          <button class="btn soft" id="netScanExport" type="button">Export JSON</button>
+        </div>
       </div>
       <p class="muted">Scans the local network for OctoPrint, Moonraker, Elegoo Centurio Carbon, and Tasmota Steckdosen.</p>
+      <div class="net-scan-filters">
+        <span class="muted">Filter:</span>
+        <label class="checkbox">
+          <input type="checkbox" id="netScanFilterElegoo" checked>
+          Elegoo Centurio Carbon
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="netScanFilterMoonraker" checked>
+          Moonraker
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="netScanFilterOctoPrint" checked>
+          OctoPrint
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="netScanFilterTasmota" checked>
+          Tasmota Steckdose
+        </label>
+      </div>
+      <p class="muted" id="netScanTimestamp">No scan run yet.</p>
       <div id="netScanNotice" class="notice"></div>
       <div class="table-wrap">
         <table class="data-table">

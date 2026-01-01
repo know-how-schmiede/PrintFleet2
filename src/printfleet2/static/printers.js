@@ -8,8 +8,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const importBtn = document.getElementById("printerImport");
   const importFile = document.getElementById("printerImportFile");
   const netScanBtn = document.getElementById("netScanButton");
+  const netScanExportBtn = document.getElementById("netScanExport");
   const netScanNotice = document.getElementById("netScanNotice");
   const netScanTable = document.getElementById("netScanTable");
+  const netScanTimestamp = document.getElementById("netScanTimestamp");
+  const sortButtons = Array.from(document.querySelectorAll("[data-sort]"));
+  const netScanFilters = [
+    { id: "netScanFilterElegoo", type: "elegoo-centurio-carbon" },
+    { id: "netScanFilterMoonraker", type: "moonraker" },
+    { id: "netScanFilterOctoPrint", type: "octoprint" },
+    { id: "netScanFilterTasmota", type: "tasmota" },
+  ];
 
   if (!form || !notice || !submitBtn || !resetBtn || !refreshBtn) {
     return;
@@ -139,6 +148,214 @@ document.addEventListener("DOMContentLoaded", () => {
     URL.revokeObjectURL(url);
   }
 
+  function buildNetScanExportFileName() {
+    const now = new Date();
+    const pad = (value) => String(value).padStart(2, "0");
+    return (
+      "printfleet_net_scan_" +
+      now.getFullYear() +
+      pad(now.getMonth() + 1) +
+      pad(now.getDate()) +
+      "_" +
+      pad(now.getHours()) +
+      pad(now.getMinutes()) +
+      pad(now.getSeconds()) +
+      ".json"
+    );
+  }
+
+  function formatDateTime(value) {
+    if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
+      return "";
+    }
+    return value.toLocaleString("de-DE");
+  }
+
+  function updateNetScanTimestamp(date) {
+    if (!netScanTimestamp) {
+      return;
+    }
+    if (!date) {
+      netScanTimestamp.textContent = "No scan run yet.";
+      return;
+    }
+    netScanTimestamp.textContent = `Letzter Scan: ${formatDateTime(date)}`;
+  }
+
+  let lastNetScan = { items: [], scannedAt: null };
+
+  let printersCache = [];
+  let sortState = { key: null, direction: "asc" };
+
+  function sortValue(printer, key) {
+    if (!printer) {
+      return "";
+    }
+    switch (key) {
+      case "name":
+        return normalizeKey(printer.name);
+      case "host":
+        return normalizeKey(printer.host);
+      case "enabled":
+        return printer.enabled ? 1 : 0;
+      case "scanning":
+        return printer.scanning ? 1 : 0;
+      case "tasmota_host":
+        return normalizeKey(printer.tasmota_host);
+      default:
+        return "";
+    }
+  }
+
+  function sortedPrinters(items) {
+    if (!sortState.key) {
+      return items.slice();
+    }
+    return items
+      .map((printer, index) => ({ printer, index }))
+      .sort((left, right) => {
+        const a = sortValue(left.printer, sortState.key);
+        const b = sortValue(right.printer, sortState.key);
+        if (a < b) {
+          return sortState.direction === "asc" ? -1 : 1;
+        }
+        if (a > b) {
+          return sortState.direction === "asc" ? 1 : -1;
+        }
+        return left.index - right.index;
+      })
+      .map((entry) => entry.printer);
+  }
+
+  function updateSortButtons() {
+    sortButtons.forEach((button) => {
+      const key = button.dataset.sort;
+      if (sortState.key === key) {
+        button.dataset.direction = sortState.direction;
+      } else {
+        delete button.dataset.direction;
+      }
+    });
+  }
+
+  function renderPrinterTable(items) {
+    const table = document.getElementById("printerTable");
+    table.innerHTML = "";
+    if (!items.length) {
+      table.innerHTML = "<tr><td colspan=\"8\" class=\"muted\">No printers loaded yet.</td></tr>";
+      return;
+    }
+    items.forEach((printer) => {
+      const scheme = printer.https ? "https" : "http";
+      const port = Number(printer.port || 80);
+      const defaultPort = (scheme === "https" && port === 443) || (scheme === "http" && port === 80);
+      const hostPart = printer.host || "";
+      const portPart = defaultPort ? "" : `:${port}`;
+      const webUrl = hostPart ? `${scheme}://${hostPart}${portPart}` : "";
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${printer.name}</td>
+        <td>${printer.backend}</td>
+        <td>${printer.host}</td>
+        <td>${printer.enabled ? "Yes" : "No"}</td>
+        <td>${printer.scanning ? "Yes" : "No"}</td>
+        <td>${printer.tasmota_host ? printer.tasmota_host : "-"}</td>
+        <td>${webUrl ? `<a class="btn small outline" href="${webUrl}" target="_blank" rel="noopener">Open</a>` : "-"}</td>
+        <td>
+          <button class="btn small" data-action="edit" type="button">Edit</button>
+          <button class="btn small danger" data-action="delete" type="button">Delete</button>
+        </td>
+      `;
+      const editBtn = row.querySelector('[data-action="edit"]');
+      const deleteBtn = row.querySelector('[data-action="delete"]');
+      if (editBtn) {
+        editBtn.addEventListener("click", () => fillForm(printer));
+      }
+      if (deleteBtn) {
+        deleteBtn.addEventListener("click", async () => {
+          if (!confirm("Delete printer " + printer.name + "?")) return;
+          const del = await fetch("/api/printers/" + printer.id, { method: "DELETE" });
+          if (del.ok) {
+            setNotice("Printer deleted.", "success");
+            loadPrinters();
+            clearForm({ keepNotice: true });
+          } else {
+            setNotice("Failed to delete printer.", "error");
+          }
+        });
+      }
+      table.appendChild(row);
+    });
+  }
+
+  function resolveNetScanType(device) {
+    const raw = normalizeKey(device.type || device.label || "");
+    if (!raw) {
+      return "";
+    }
+    if (raw.includes("moonraker")) {
+      return "moonraker";
+    }
+    if (raw.includes("octoprint")) {
+      return "octoprint";
+    }
+    if (raw.includes("tasmota")) {
+      return "tasmota";
+    }
+    if (raw.includes("elegoo") || raw.includes("centurio") || raw.includes("centauri")) {
+      return "elegoo-centurio-carbon";
+    }
+    return raw;
+  }
+
+  function selectedNetScanTypes() {
+    const selected = new Set();
+    netScanFilters.forEach((filter) => {
+      const field = document.getElementById(filter.id);
+      if (field && field.checked) {
+        selected.add(filter.type);
+      }
+    });
+    if (!selected.size) {
+      netScanFilters.forEach((filter) => selected.add(filter.type));
+    }
+    return selected;
+  }
+
+  function renderNetScanTable(items) {
+    if (!netScanTable) {
+      return;
+    }
+    netScanTable.innerHTML = "";
+    if (!items.length) {
+      netScanTable.innerHTML = "<tr><td colspan=\"5\" class=\"muted\">No devices found.</td></tr>";
+      return;
+    }
+    items.forEach((device) => {
+      const row = document.createElement("tr");
+      const name = device.name ? device.name : "-";
+      const url = device.url || "";
+      row.innerHTML = `
+        <td>${device.label || device.type || "-"}</td>
+        <td>${device.host || "-"}</td>
+        <td>${device.port || "-"}</td>
+        <td>${name}</td>
+        <td>${url ? `<a class="btn small outline" href="${url}" target="_blank" rel="noopener">Open</a>` : "-"}</td>
+      `;
+      netScanTable.appendChild(row);
+    });
+  }
+
+  function applyNetScanFilters() {
+    const items = Array.isArray(lastNetScan.items) ? lastNetScan.items : [];
+    const selected = selectedNetScanTypes();
+    const filtered = items.filter((device) => selected.has(resolveNetScanType(device)));
+    renderNetScanTable(filtered);
+    if (items.length) {
+      setNetScanNotice(`Showing ${filtered.length} of ${items.length} device(s).`, "success");
+    }
+  }
+
   function formData() {
     const errorIntervalValue = Number(document.getElementById("printerErrorInterval").value || 30);
     return {
@@ -214,54 +431,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!res.ok) {
       setNotice("Failed to load printers.", "error");
     }
-    const items = data.items || [];
-    const table = document.getElementById("printerTable");
-    table.innerHTML = "";
-    if (!items.length) {
-      table.innerHTML = "<tr><td colspan=\"8\" class=\"muted\">No printers loaded yet.</td></tr>";
-      return;
-    }
-    items.forEach((printer) => {
-      const scheme = printer.https ? "https" : "http";
-      const port = Number(printer.port || 80);
-      const defaultPort = (scheme === "https" && port === 443) || (scheme === "http" && port === 80);
-      const hostPart = printer.host || "";
-      const portPart = defaultPort ? "" : `:${port}`;
-      const webUrl = hostPart ? `${scheme}://${hostPart}${portPart}` : "";
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${printer.name}</td>
-        <td>${printer.backend}</td>
-        <td>${printer.host}</td>
-        <td>${printer.enabled ? "Yes" : "No"}</td>
-        <td>${printer.scanning ? "Yes" : "No"}</td>
-        <td>${printer.tasmota_host ? printer.tasmota_host : "-"}</td>
-        <td>${webUrl ? `<a class="btn small outline" href="${webUrl}" target="_blank" rel="noopener">Open</a>` : "-"}</td>
-        <td>
-          <button class="btn small" data-action="edit" type="button">Edit</button>
-          <button class="btn small danger" data-action="delete" type="button">Delete</button>
-        </td>
-      `;
-      const editBtn = row.querySelector('[data-action="edit"]');
-      const deleteBtn = row.querySelector('[data-action="delete"]');
-      if (editBtn) {
-        editBtn.addEventListener("click", () => fillForm(printer));
-      }
-      if (deleteBtn) {
-        deleteBtn.addEventListener("click", async () => {
-          if (!confirm("Delete printer " + printer.name + "?")) return;
-          const del = await fetch("/api/printers/" + printer.id, { method: "DELETE" });
-          if (del.ok) {
-            setNotice("Printer deleted.", "success");
-            loadPrinters();
-            clearForm({ keepNotice: true });
-          } else {
-            setNotice("Failed to delete printer.", "error");
-          }
-        });
-      }
-      table.appendChild(row);
-    });
+    printersCache = data.items || [];
+    renderPrinterTable(sortedPrinters(printersCache));
   }
 
   form.addEventListener("submit", async (event) => {
@@ -441,26 +612,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         const data = await res.json().catch(() => ({}));
         const items = data.items || [];
-        netScanTable.innerHTML = "";
+        const scannedAt = data.scanned_at ? new Date(data.scanned_at) : new Date();
+        lastNetScan = { items, scannedAt };
+        updateNetScanTimestamp(scannedAt);
         if (!items.length) {
-          netScanTable.innerHTML = "<tr><td colspan=\"5\" class=\"muted\">No devices found.</td></tr>";
+          renderNetScanTable([]);
           setNetScanNotice("No devices found.", "success");
           return;
         }
-        items.forEach((device) => {
-          const row = document.createElement("tr");
-          const name = device.name ? device.name : "-";
-          const url = device.url || "";
-          row.innerHTML = `
-            <td>${device.label || device.type || "-"}</td>
-            <td>${device.host || "-"}</td>
-            <td>${device.port || "-"}</td>
-            <td>${name}</td>
-            <td>${url ? `<a class="btn small outline" href="${url}" target="_blank" rel="noopener">Open</a>` : "-"}</td>
-          `;
-          netScanTable.appendChild(row);
-        });
-        setNetScanNotice(`Found ${items.length} device(s).`, "success");
+        applyNetScanFilters();
       } catch (error) {
         setNetScanNotice("Net scan failed.", "error");
         netScanTable.innerHTML = "<tr><td colspan=\"5\" class=\"muted\">Scan failed.</td></tr>";
@@ -470,5 +630,53 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  if (netScanExportBtn) {
+    netScanExportBtn.addEventListener("click", () => {
+      if (!lastNetScan.scannedAt) {
+        setNetScanNotice("No scan data to export yet.", "error");
+        return;
+      }
+      const selected = selectedNetScanTypes();
+      const items = (lastNetScan.items || []).filter((device) => selected.has(resolveNetScanType(device)));
+      downloadJson(buildNetScanExportFileName(), {
+        scanned_at: lastNetScan.scannedAt.toISOString(),
+        scanned_at_local: formatDateTime(lastNetScan.scannedAt),
+        filters: Array.from(selected),
+        items,
+      });
+      setNetScanNotice("Net scan export started.", "success");
+    });
+  }
+
+  netScanFilters.forEach((filter) => {
+    const field = document.getElementById(filter.id);
+    if (!field) {
+      return;
+    }
+    field.addEventListener("change", () => {
+      if (!lastNetScan.items.length) {
+        return;
+      }
+      applyNetScanFilters();
+    });
+  });
+
+  sortButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.sort;
+      if (!key) {
+        return;
+      }
+      if (sortState.key === key) {
+        sortState.direction = sortState.direction === "asc" ? "desc" : "asc";
+      } else {
+        sortState = { key, direction: "asc" };
+      }
+      updateSortButtons();
+      renderPrinterTable(sortedPrinters(printersCache));
+    });
+  });
+
   loadPrinters();
+  updateSortButtons();
 });

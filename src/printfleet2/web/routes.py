@@ -1,5 +1,6 @@
 import shutil
 import subprocess
+from datetime import datetime, timezone
 
 from flask import Blueprint, request, session as flask_session, Response, render_template, redirect, stream_with_context, url_for
 
@@ -489,7 +490,7 @@ def live_wall_plug_status():
 
 @bp.post("/api/net-scan")
 def net_scan():
-    return {"items": scan_local_network()}
+    return {"items": scan_local_network(), "scanned_at": datetime.now(timezone.utc).isoformat()}
 
 
 @bp.get("/api/printers/<int:printer_id>")

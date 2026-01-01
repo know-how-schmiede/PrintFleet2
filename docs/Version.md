@@ -1,5 +1,11 @@
 # PrintFleet2 Versions
 
+## 0.6.8 - 2026-1-1
+
+- Net Scan Filter (type)
+- Export Net Scan als JSON
+- Sortierung Configured printers
+
 ## 0.6.7 - 2026-1-1
 
 - Update Dokumentation API endpoints
