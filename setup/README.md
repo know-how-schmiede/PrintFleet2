@@ -15,6 +15,7 @@ cd PrintFleet2
 Debian 13 LXC prerequisites:
 
 ```bash
+apt install sudo
 sudo apt update
 sudo apt install -y python3-venv python3-pip ffmpeg
 ```
