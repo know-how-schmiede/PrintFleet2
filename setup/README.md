@@ -30,17 +30,9 @@ cd PrintFleet2
 ## Quick Start (recommended)
 
 ```bash
-chmod +x setup/install.sh
-sudo ./setup/install.sh
-
-. /root/PrintFleet2/.venv/bin/activate
-python -m printfleet2
+sudo apt update
+sudo apt install -y python3-venv python3-pip ffmpeg
 ```
-
-The script installs dependencies and runs Alembic migrations automatically.
-Follow the prompts, then run the suggested test command. Stop with Ctrl+C when done testing.
-
-## Update (recommended)
 
 ```bash
 chmod +x setup/update.sh
