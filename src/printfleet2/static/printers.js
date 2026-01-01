@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const netScanTable = document.getElementById("netScanTable");
   const netScanTimestamp = document.getElementById("netScanTimestamp");
   const sortButtons = Array.from(document.querySelectorAll("[data-sort]"));
+  const netSortButtons = Array.from(document.querySelectorAll("[data-net-sort]"));
   const netScanFilters = [
     { id: "netScanFilterElegoo", type: "elegoo-centurio-carbon" },
     { id: "netScanFilterMoonraker", type: "moonraker" },
@@ -109,6 +110,25 @@ document.addEventListener("DOMContentLoaded", () => {
     return value.trim().toLowerCase();
   }
 
+  function hostSortKey(value) {
+    if (value === null || value === undefined) {
+      return "2-";
+    }
+    const raw = String(value).trim().toLowerCase();
+    if (!raw) {
+      return "2-";
+    }
+    const match = raw.match(/^(\d{1,3}(?:\.\d{1,3}){3})(?::\d+)?$/);
+    if (match) {
+      const octets = match[1]
+        .split(".")
+        .map((part) => String(Math.min(255, Math.max(0, Number(part) || 0))).padStart(3, "0"))
+        .join(".");
+      return `0-${octets}`;
+    }
+    return `1-${raw}`;
+  }
+
   function buildHostKey(payload) {
     if (!payload) {
       return "";
@@ -186,6 +206,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let printersCache = [];
   let sortState = { key: null, direction: "asc" };
+  let netSortState = { key: null, direction: "asc" };
 
   function sortValue(printer, key) {
     if (!printer) {
@@ -194,14 +215,16 @@ document.addEventListener("DOMContentLoaded", () => {
     switch (key) {
       case "name":
         return normalizeKey(printer.name);
+      case "backend":
+        return normalizeKey(printer.backend);
       case "host":
-        return normalizeKey(printer.host);
+        return hostSortKey(printer.host);
       case "enabled":
         return printer.enabled ? 1 : 0;
       case "scanning":
         return printer.scanning ? 1 : 0;
       case "tasmota_host":
-        return normalizeKey(printer.tasmota_host);
+        return hostSortKey(printer.tasmota_host);
       default:
         return "";
     }
@@ -326,12 +349,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!netScanTable) {
       return;
     }
+    const sortedItems = sortNetScanItems(items);
     netScanTable.innerHTML = "";
-    if (!items.length) {
+    if (!sortedItems.length) {
       netScanTable.innerHTML = "<tr><td colspan=\"5\" class=\"muted\">No devices found.</td></tr>";
       return;
     }
-    items.forEach((device) => {
+    sortedItems.forEach((device) => {
       const row = document.createElement("tr");
       const name = device.name ? device.name : "-";
       const url = device.url || "";
@@ -343,6 +367,52 @@ document.addEventListener("DOMContentLoaded", () => {
         <td>${url ? `<a class="btn small outline" href="${url}" target="_blank" rel="noopener">Open</a>` : "-"}</td>
       `;
       netScanTable.appendChild(row);
+    });
+  }
+
+  function netSortValue(device, key) {
+    switch (key) {
+      case "type":
+        return normalizeKey(device.label || device.type);
+      case "host":
+        return hostSortKey(device.host);
+      case "port":
+        return Number(device.port || 0);
+      case "name":
+        return normalizeKey(device.name);
+      default:
+        return "";
+    }
+  }
+
+  function sortNetScanItems(items) {
+    if (!netSortState.key) {
+      return items.slice();
+    }
+    return items
+      .map((device, index) => ({ device, index }))
+      .sort((left, right) => {
+        const a = netSortValue(left.device, netSortState.key);
+        const b = netSortValue(right.device, netSortState.key);
+        if (a < b) {
+          return netSortState.direction === "asc" ? -1 : 1;
+        }
+        if (a > b) {
+          return netSortState.direction === "asc" ? 1 : -1;
+        }
+        return left.index - right.index;
+      })
+      .map((entry) => entry.device);
+  }
+
+  function updateNetSortButtons() {
+    netSortButtons.forEach((button) => {
+      const key = button.dataset.netSort;
+      if (netSortState.key === key) {
+        button.dataset.direction = netSortState.direction;
+      } else {
+        delete button.dataset.direction;
+      }
     });
   }
 
@@ -661,6 +731,22 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  netSortButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.netSort;
+      if (!key) {
+        return;
+      }
+      if (netSortState.key === key) {
+        netSortState.direction = netSortState.direction === "asc" ? "desc" : "asc";
+      } else {
+        netSortState = { key, direction: "asc" };
+      }
+      updateNetSortButtons();
+      applyNetScanFilters();
+    });
+  });
+
   sortButtons.forEach((button) => {
     button.addEventListener("click", () => {
       const key = button.dataset.sort;
@@ -679,4 +765,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
   loadPrinters();
   updateSortButtons();
+  updateNetSortButtons();
 });

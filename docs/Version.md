@@ -5,6 +5,9 @@
 - Net Scan Filter (type)
 - Export Net Scan als JSON
 - Sortierung Configured printers
+- Sortierung Net Scan
+- Sortierrichtung mit Buttons
+- Sorttierung IP-Adressen Numerische Sortierung
 
 ## 0.6.7 - 2026-1-1
 

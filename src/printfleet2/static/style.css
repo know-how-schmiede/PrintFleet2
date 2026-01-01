@@ -426,20 +426,40 @@ label.checkbox input {
   gap: 6px;
 }
 
-.sort-button::after {
-  content: " ^v";
-  font-size: 0.75em;
-  color: var(--muted);
+.sort-icon {
+  position: relative;
+  width: 8px;
+  height: 12px;
+  display: inline-block;
 }
 
-.sort-button[data-direction="asc"]::after {
-  content: " ^";
-  color: var(--accent);
+.sort-icon::before,
+.sort-icon::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
 }
 
-.sort-button[data-direction="desc"]::after {
-  content: " v";
-  color: var(--accent);
+.sort-icon::before {
+  top: 0;
+  border-bottom: 5px solid var(--muted);
+}
+
+.sort-icon::after {
+  bottom: 0;
+  border-top: 5px solid var(--muted);
+}
+
+.sort-button[data-direction="asc"] .sort-icon::before {
+  border-bottom-color: var(--accent);
+}
+
+.sort-button[data-direction="desc"] .sort-icon::after {
+  border-top-color: var(--accent);
 }
 
 .net-scan-filters {

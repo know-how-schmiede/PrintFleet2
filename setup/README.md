@@ -12,6 +12,13 @@ cd PrintFleet2
 
 ## 2) Create a virtual environment and install dependencies
 
+Debian 13 LXC prerequisites:
+
+```bash
+sudo apt update
+sudo apt install -y python3-venv python3-pip ffmpeg
+```
+
 ```bash
 ./setup/install.sh
 ```
