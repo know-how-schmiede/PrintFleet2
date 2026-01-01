@@ -3,6 +3,23 @@
 This folder contains install scripts and the setup guide.
 All commands below are shell examples for Linux.
 
+## PrintFleet Setup Scripts
+
+- `setup/install.sh`: interactive installer (packages, venv, dependencies, optional test run)
+- `setup/install-service.sh`: installs and enables the systemd service (run after a successful test)
+- `setup/update.sh`: interactive updater (git pull, dependencies, migrations, optional service restart/test)
+
+## Prerequisites
+
+Debian 13 LXC packages:
+
+```bash
+apt install sudo -y
+sudo apt update -y
+sudo apt upgrade -y
+sudo apt install -y python3-venv python3-pip ffmpeg git
+```
+
 ## 1) Clone
 
 ```bash
@@ -10,17 +27,24 @@ git clone https://github.com/know-how-schmiede/PrintFleet2.git
 cd PrintFleet2
 ```
 
-## 2) Create a virtual environment and install dependencies
-
-Debian 13 LXC prerequisites:
+## Quick Start (recommended)
 
 ```bash
-sudo apt update
-sudo apt install -y python3-venv python3-pip ffmpeg
+chmod +x setup/install.sh
+sudo ./setup/install.sh
+
+. /root/PrintFleet2/.venv/bin/activate
+python -m printfleet2
 ```
 
+The script installs dependencies and runs Alembic migrations automatically.
+Follow the prompts, then run the suggested test command. Stop with Ctrl+C when done testing.
+
+## Update (recommended)
+
 ```bash
-./setup/install.sh
+chmod +x setup/update.sh
+sudo ./setup/update.sh
 ```
 
 Manual steps (if you do not want to use the script):
@@ -123,7 +147,7 @@ PowerShell:
 alembic upgrade head
 ```
 
-## 5) Optional: install as a systemd service
+## Install the Service (after the test)
 
 ```bash
 sudo ./setup/install-service.sh

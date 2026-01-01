@@ -20,15 +20,22 @@ prompt() {
   printf '%s' "$value"
 }
 
-echo "PrintFleet2 setup inside Debian 13 LXC."
+echo "PrintFleet2 update inside Debian 13 LXC."
 echo "Press Enter to accept defaults."
 echo
 
 REPO_DIR="$(prompt "Path to PrintFleet2 repo" "$default_repo_dir")"
 SERVICE_USER="$(prompt "Service user" "printfleet2")"
 VENV_DIR="$(prompt "Python venv path" "${REPO_DIR}/.venv")"
-START_TEST_RAW="$(prompt "Start PrintFleet2 now for a test? (y/n)" "y")"
+SERVICE_NAME="$(prompt "systemd service name" "printfleet2")"
+STOP_SERVICE_RAW="$(prompt "Stop service before update? (y/n)" "y")"
+PULL_RAW="$(prompt "Pull latest changes with git? (y/n)" "y")"
+RESTART_RAW="$(prompt "Restart service after update? (y/n)" "y")"
+START_TEST_RAW="$(prompt "Start PrintFleet2 now for a test? (y/n)" "n")"
 
+STOP_SERVICE="$(printf '%s' "$STOP_SERVICE_RAW" | tr '[:upper:]' '[:lower:]')"
+PULL="$(printf '%s' "$PULL_RAW" | tr '[:upper:]' '[:lower:]')"
+RESTART_SERVICE="$(printf '%s' "$RESTART_RAW" | tr '[:upper:]' '[:lower:]')"
 START_TEST="$(printf '%s' "$START_TEST_RAW" | tr '[:upper:]' '[:lower:]')"
 
 REPO_DIR="$(cd "$REPO_DIR" && pwd)"
@@ -53,22 +60,25 @@ else
   exit 1
 fi
 
-echo "Installing packages..."
-DEBIAN_FRONTEND=noninteractive apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get -y install git python3 python3-venv python3-pip build-essential ffmpeg
-echo "Note: Live-Wall RTSP MJPEG proxy requires ffmpeg (installed above)."
-
-if ! id -u "$SERVICE_USER" >/dev/null 2>&1; then
-  useradd -m -s /bin/bash "$SERVICE_USER"
+if [[ "$PULL" == "y" ]]; then
+  if ! command -v git >/dev/null 2>&1; then
+    echo "WARNING: git not found, skipping pull."
+  else
+    runuser -u "$SERVICE_USER" -- bash -lc "cd \"$REPO_DIR\" && git pull --ff-only"
+  fi
 fi
 
-chown -R "${SERVICE_USER}:${SERVICE_USER}" "$REPO_DIR"
+if [[ "$STOP_SERVICE" == "y" ]]; then
+  systemctl stop "$SERVICE_NAME"
+  echo "Service stopped: ${SERVICE_NAME}"
+fi
 
-echo "Creating virtual environment..."
 if [[ ! -d "$VENV_DIR" ]]; then
+  echo "Creating virtual environment..."
   runuser -u "$SERVICE_USER" -- python3 -m venv "$VENV_DIR"
 fi
 
+echo "Updating Python packages..."
 runuser -u "$SERVICE_USER" -- "$VENV_DIR/bin/python" -m pip install --upgrade pip
 runuser -u "$SERVICE_USER" -- "$VENV_DIR/bin/python" -m pip install -r "$REQ_FILE"
 runuser -u "$SERVICE_USER" -- "$VENV_DIR/bin/python" -m pip install -e "$REPO_DIR"
@@ -77,13 +87,14 @@ echo "Running database migrations..."
 runuser -u "$SERVICE_USER" -- bash -lc "cd \"$REPO_DIR\" && \"$VENV_DIR/bin/alembic\" upgrade head"
 
 echo
-echo "Installation done."
+echo "Update done."
 echo "Test command:"
 echo "  cd ${REPO_DIR} && ${VENV_DIR}/bin/python -m printfleet2"
-echo "Open: http://<container-ip>:8080"
-echo
-echo "After a successful test, run:"
-echo "  ${script_dir}/install-service.sh"
+
+if [[ "$RESTART_SERVICE" == "y" ]]; then
+  systemctl restart "$SERVICE_NAME"
+  echo "Service restarted: ${SERVICE_NAME}"
+fi
 
 if [[ "$START_TEST" == "y" ]]; then
   echo
