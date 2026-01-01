@@ -50,6 +50,13 @@ if [[ ! -d "$REPO_DIR/src/printfleet2" ]]; then
   exit 1
 fi
 
+if ! id -u "$SERVICE_USER" >/dev/null 2>&1; then
+  echo "Service user not found. Creating: ${SERVICE_USER}"
+  useradd -m -s /bin/bash "$SERVICE_USER"
+fi
+
+chown -R "${SERVICE_USER}:${SERVICE_USER}" "$REPO_DIR"
+
 REQ_FILE=""
 if [[ -f "$REPO_DIR/requirements.txt" ]]; then
   REQ_FILE="$REPO_DIR/requirements.txt"
