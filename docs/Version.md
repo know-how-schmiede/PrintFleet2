@@ -7,6 +7,7 @@
 - Layout Streams auf Live-Wall
 - Stream active Feld
 - VideoStream Größe einstellen
+- MJPEG-Proxy für RTSP-Stream (Tapo-Kameras)
 
 ## 0.6.6 - 2025-12-31
 

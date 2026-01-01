@@ -461,6 +461,7 @@ label.checkbox input {
 .live-wall {
   display: grid;
   gap: 24px;
+  --live-wall-iframe-scale: 0.45
 }
 
 .live-wall-hero {
@@ -528,6 +529,26 @@ label.checkbox input {
   border: 0;
   display: block;
   object-fit: cover;
+}
+
+.live-wall-frame iframe {
+  width: calc(100% / var(--live-wall-iframe-scale));
+  height: calc(100% / var(--live-wall-iframe-scale));
+  transform: scale(var(--live-wall-iframe-scale));
+  transform-origin: top left;
+  overflow: hidden;
+}
+
+.live-wall-placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.8rem;
 }
 
 .live-wall-caption {

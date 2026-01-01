@@ -1,4 +1,7 @@
-from flask import Blueprint, request, session as flask_session, Response, render_template, redirect, url_for
+import shutil
+import subprocess
+
+from flask import Blueprint, request, session as flask_session, Response, render_template, redirect, stream_with_context, url_for
 
 from printfleet2.db.session import session_scope
 from printfleet2.services.printer_service import (
@@ -39,6 +42,74 @@ from printfleet2.services.auth_service import hash_password, verify_password
 bp = Blueprint("web", __name__)
 
 
+def clean_text(value: object | None) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        value = str(value)
+    value = value.strip()
+    return value or None
+
+
+def normalize_rtsp_host(host: str | None) -> str | None:
+    if not host:
+        return None
+    candidate = host.strip()
+    if not candidate:
+        return None
+    lower = candidate.lower()
+    if lower.startswith("rtsp://"):
+        candidate = candidate[7:]
+    candidate = candidate.split("/", 1)[0]
+    if not candidate:
+        return None
+    if candidate.startswith("["):
+        if "]" in candidate and candidate.rsplit("]", 1)[-1].startswith(":"):
+            return candidate
+        return f"{candidate}:554"
+    if ":" in candidate:
+        return candidate
+    return f"{candidate}:554"
+
+
+def build_rtsp_url(host: str | None, user: str | None, password: str | None, stream_path: str = "stream1") -> str | None:
+    host_value = clean_text(host)
+    if not host_value:
+        return None
+    lower = host_value.lower()
+    if lower.startswith("rtsp://"):
+        tail = host_value[7:]
+        if "@" in tail:
+            return host_value
+        user_value = clean_text(user)
+        password_value = clean_text(password)
+        if user_value and password_value:
+            return f"rtsp://{user_value}:{password_value}@{tail}"
+        return host_value
+    if "/" in host_value:
+        base, path = host_value.split("/", 1)
+        path = f"/{path}"
+    else:
+        base = host_value
+        path = f"/{stream_path}"
+    base = base.strip()
+    if not base:
+        return None
+    if "@" in base:
+        credentials, host_part = base.rsplit("@", 1)
+        normalized_host = normalize_rtsp_host(host_part)
+        if not normalized_host:
+            return None
+        return f"rtsp://{credentials}@{normalized_host}{path}"
+    normalized_host = normalize_rtsp_host(base)
+    if not normalized_host:
+        return None
+    user_value = clean_text(user)
+    password_value = clean_text(password)
+    credentials = f"{user_value}:{password_value}@" if user_value and password_value else ""
+    return f"rtsp://{credentials}{normalized_host}{path}"
+
+
 def normalize_layout(layout: str | None) -> str:
     if not layout:
         return "standard"
@@ -60,45 +131,85 @@ def stream_type_for_url(url: str) -> str:
 def build_live_wall_config(settings: dict) -> dict:
     streams: list[dict] = []
 
-    def add_stream(url: str | None, label: str, active: bool = True, title: str | None = None) -> None:
-        if not active or not url:
+    def add_stream(
+        stream_id: int,
+        url: str | None,
+        label: str,
+        active: bool = True,
+        title: str | None = None,
+        rtsp_url: str | None = None,
+    ) -> None:
+        if not active:
             return
-        url = url.strip()
-        if not url:
-            return
+        url_value = clean_text(url)
+        rtsp_value = clean_text(rtsp_url)
+        if url_value:
+            final_url = url_value
+        elif rtsp_value:
+            final_url = url_for("web.live_wall_stream", stream_id=stream_id)
+        else:
+            final_url = None
         title_value = title.strip() if isinstance(title, str) else ""
         label_value = title_value or label
         streams.append(
             {
                 "label": label_value,
-                "url": url,
-                "type": stream_type_for_url(url),
+                "url": final_url,
+                "type": stream_type_for_url(final_url) if final_url else "empty",
             }
         )
 
     add_stream(
+        1,
         settings.get("kiosk_stream_url_1"),
         "Stream 1",
         settings.get("kiosk_stream_active_1", True),
         settings.get("kiosk_stream_title_1"),
+        build_rtsp_url(
+            settings.get("kiosk_camera_host_1"),
+            settings.get("kiosk_camera_user_1"),
+            settings.get("kiosk_camera_password_1"),
+            1,
+        ),
     )
     add_stream(
+        2,
         settings.get("kiosk_stream_url_2"),
         "Stream 2",
         settings.get("kiosk_stream_active_2", True),
         settings.get("kiosk_stream_title_2"),
+        build_rtsp_url(
+            settings.get("kiosk_camera_host_2"),
+            settings.get("kiosk_camera_user_2"),
+            settings.get("kiosk_camera_password_2"),
+            2,
+        ),
     )
     add_stream(
+        3,
         settings.get("kiosk_stream_url_3"),
         "Stream 3",
         settings.get("kiosk_stream_active_3", True),
         settings.get("kiosk_stream_title_3"),
+        build_rtsp_url(
+            settings.get("kiosk_camera_host_3"),
+            settings.get("kiosk_camera_user_3"),
+            settings.get("kiosk_camera_password_3"),
+            3,
+        ),
     )
     add_stream(
+        4,
         settings.get("kiosk_stream_url_4"),
         "Stream 4",
         settings.get("kiosk_stream_active_4", True),
         settings.get("kiosk_stream_title_4"),
+        build_rtsp_url(
+            settings.get("kiosk_camera_host_4"),
+            settings.get("kiosk_camera_user_4"),
+            settings.get("kiosk_camera_password_4"),
+            4,
+        ),
     )
 
     poll_interval = settings.get("poll_interval")
@@ -164,6 +275,79 @@ def build_live_wall_printers(printers) -> list[dict]:
             }
         )
     return active_printers
+
+
+def build_rtsp_url_from_settings(settings, stream_id: int) -> str | None:
+    host = getattr(settings, f"kiosk_camera_host_{stream_id}", None)
+    user = getattr(settings, f"kiosk_camera_user_{stream_id}", None)
+    password = getattr(settings, f"kiosk_camera_password_{stream_id}", None)
+    return build_rtsp_url(host, user, password)
+
+
+def iter_mjpeg_stream(rtsp_url: str):
+    command = [
+        "ffmpeg",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-rtsp_transport",
+        "tcp",
+        "-i",
+        rtsp_url,
+        "-an",
+        "-sn",
+        "-dn",
+        "-f",
+        "image2pipe",
+        "-vcodec",
+        "mjpeg",
+        "-q:v",
+        "5",
+        "-r",
+        "10",
+        "-",
+    ]
+    process = subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        stdin=subprocess.DEVNULL,
+        bufsize=0,
+    )
+    buffer = b""
+    try:
+        while True:
+            chunk = process.stdout.read(4096) if process.stdout else b""
+            if not chunk:
+                break
+            buffer += chunk
+            while True:
+                start = buffer.find(b"\xff\xd8")
+                if start == -1:
+                    buffer = buffer[-2:] if len(buffer) > 2 else buffer
+                    break
+                end = buffer.find(b"\xff\xd9", start + 2)
+                if end == -1:
+                    if start > 0:
+                        buffer = buffer[start:]
+                    break
+                frame = buffer[start : end + 2]
+                buffer = buffer[end + 2 :]
+                header = (
+                    b"--frame\r\n"
+                    b"Content-Type: image/jpeg\r\n"
+                    + f"Content-Length: {len(frame)}\r\n\r\n".encode()
+                )
+                yield header + frame + b"\r\n"
+    except GeneratorExit:
+        pass
+    finally:
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=2)
+            except Exception:
+                process.kill()
 
 
 def clean_optional(value: object | None) -> str | None:
@@ -599,6 +783,27 @@ def api_docs():
 @bp.get("/docs")
 def docs_page():
     return render_template("docs.html")
+
+
+@bp.get("/live-wall/stream/<int:stream_id>.mjpg")
+def live_wall_stream(stream_id: int):
+    if stream_id not in {1, 2, 3, 4}:
+        return {"error": "not_found"}, 404
+    if shutil.which("ffmpeg") is None:
+        return {"error": "ffmpeg_missing"}, 503
+    with session_scope() as db_session:
+        settings = ensure_settings_row(db_session)
+        active = getattr(settings, f"kiosk_stream_active_{stream_id}", True)
+        if not active:
+            return {"error": "not_active"}, 404
+        rtsp_url = build_rtsp_url_from_settings(settings, stream_id)
+    if not rtsp_url:
+        return {"error": "not_configured"}, 404
+    return Response(
+        stream_with_context(iter_mjpeg_stream(rtsp_url)),
+        mimetype="multipart/x-mixed-replace; boundary=frame",
+        headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+    )
 
 
 @bp.get("/printers")

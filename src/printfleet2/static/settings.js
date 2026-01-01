@@ -150,13 +150,45 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function buildRtspUrl({ index, hostId, userId, passwordId }) {
-    const host = normalizeRtspHost(readFieldValue(hostId));
-    const user = readFieldValue(userId);
-    const password = readFieldValue(passwordId);
-    if (!host || !user || !password) {
+    const rawHost = readFieldValue(hostId);
+    if (!rawHost) {
       return "";
     }
-    return `rtsp://${user}:${password}@${host}/stream${index}`;
+    const lower = rawHost.toLowerCase();
+    if (lower.startsWith("rtsp://")) {
+      if (rawHost.includes("@")) {
+        return rawHost;
+      }
+      const user = readFieldValue(userId);
+      const password = readFieldValue(passwordId);
+      if (user && password) {
+        return `rtsp://${user}:${password}@${rawHost.slice(7)}`;
+      }
+      return rawHost;
+    }
+    let base = rawHost;
+    let path = "/stream1";
+    if (rawHost.includes("/")) {
+      const parts = rawHost.split("/", 2);
+      base = parts[0];
+      path = `/${parts[1]}`;
+    }
+    if (base.includes("@")) {
+      const [creds, hostPart] = base.split("@", 2);
+      const normalized = normalizeRtspHost(hostPart);
+      if (!normalized) {
+        return "";
+      }
+      return `rtsp://${creds}@${normalized}${path}`;
+    }
+    const normalizedHost = normalizeRtspHost(base);
+    if (!normalizedHost) {
+      return "";
+    }
+    const user = readFieldValue(userId);
+    const password = readFieldValue(passwordId);
+    const credentials = user && password ? `${user}:${password}@` : "";
+    return `rtsp://${credentials}${normalizedHost}${path}`;
   }
 
   function updateGeneratedRtspFields() {

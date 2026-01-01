@@ -60,6 +60,15 @@ ffmpeg -version
 ffplay -version
 ```
 
+If `ffmpeg` is still not found, use the direct path once:
+
+```powershell
+$ffmpeg = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\Gyan.FFmpeg*\ffmpeg-*\bin\ffmpeg.exe"
+$ffplay = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\Gyan.FFmpeg*\ffmpeg-*\bin\ffplay.exe"
+& $ffmpeg -version
+& $ffplay -version
+```
+
 Test a stream (press `q` to quit):
 
 ```powershell

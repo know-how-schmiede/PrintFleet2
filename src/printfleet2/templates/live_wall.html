@@ -21,10 +21,14 @@
         {% for stream in live_wall.streams %}
           <article class="live-wall-tile">
             <div class="live-wall-frame">
-              {% if stream.type == "image" %}
-                <img src="{{ stream.url }}" alt="{{ stream.label }}">
+              {% if stream.url %}
+                {% if stream.type == "image" %}
+                  <img src="{{ stream.url }}" alt="{{ stream.label }}">
+                {% else %}
+                  <iframe src="{{ stream.url }}" title="{{ stream.label }}" loading="lazy" allow="autoplay; fullscreen" allowfullscreen scrolling="no"></iframe>
+                {% endif %}
               {% else %}
-                <iframe src="{{ stream.url }}" title="{{ stream.label }}" loading="lazy" allowfullscreen></iframe>
+                <div class="live-wall-placeholder">no Configuration</div>
               {% endif %}
             </div>
             <div class="live-wall-caption">
