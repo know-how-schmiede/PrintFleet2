@@ -37,17 +37,18 @@ def ensure_printer_schema(session: Session) -> None:
         columns = {column["name"] for column in inspector.get_columns("printers")}
     except Exception:
         return
-    if "scanning" in columns:
-        return
     try:
         with engine.begin() as conn:
-            conn.execute(text("ALTER TABLE printers ADD COLUMN scanning BOOLEAN DEFAULT 1"))
-            if "no_scanning" in columns:
-                conn.execute(
-                    text("UPDATE printers SET scanning = CASE WHEN no_scanning = 1 THEN 0 ELSE 1 END")
-                )
-            else:
-                conn.execute(text("UPDATE printers SET scanning = 1"))
+            if "scanning" not in columns:
+                conn.execute(text("ALTER TABLE printers ADD COLUMN scanning BOOLEAN DEFAULT 1"))
+                if "no_scanning" in columns:
+                    conn.execute(
+                        text("UPDATE printers SET scanning = CASE WHEN no_scanning = 1 THEN 0 ELSE 1 END")
+                    )
+                else:
+                    conn.execute(text("UPDATE printers SET scanning = 1"))
+            if "group_id" not in columns:
+                conn.execute(text("ALTER TABLE printers ADD COLUMN group_id INTEGER"))
     except Exception:
         return
 
@@ -80,6 +81,7 @@ def create_printer(session: Session, data: dict) -> Printer:
         printer_type=data.get("printer_type"),
         notes=data.get("notes"),
         enabled=_bool_value(data.get("enabled"), True),
+        group_id=data.get("group_id"),
     )
     session.add(printer)
     return printer
@@ -116,6 +118,8 @@ def update_printer(session: Session, printer: Printer, data: dict) -> Printer:
         printer.notes = data["notes"]
     if "enabled" in data:
         printer.enabled = _bool_value(data.get("enabled"), printer.enabled)
+    if "group_id" in data:
+        printer.group_id = data.get("group_id")
     return printer
 
 
@@ -141,6 +145,7 @@ def printer_to_dict(printer: Printer) -> dict:
         "printer_type": printer.printer_type,
         "notes": printer.notes,
         "enabled": printer.enabled,
+        "group_id": printer.group_id,
     }
 
 

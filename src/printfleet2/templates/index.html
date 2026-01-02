@@ -7,13 +7,9 @@
     <div class="container hero-grid">
       <div class="hero-copy">
         <p class="eyebrow">PrintFleet2</p>
-        <h1>Control your fleet with a cleaner core.</h1>
-        <p class="lead">
-          This scaffold focuses on stability and scalability. SQLAlchemy and Alembic are wired
-          for growth while keeping the interface practical for daily use.
-        </p>
+        <h1>Control your fleet.</h1>
+        <p class="lead">Fast status, clear actions.</p>
         <div class="hero-actions">
-          <a class="btn primary" href="/docs">View API docs</a>
           <a class="btn outline" href="/api/printers">Printers JSON</a>
         </div>
       </div>
@@ -24,19 +20,19 @@
           <span class="metric-value" id="printerCount">{{ snapshot.total_printers if snapshot else "--" }}</span>
         </div>
         <div class="metric">
-          <span class="metric-label">Active prints</span>
+          <span class="metric-label">Active jobs</span>
           <span class="metric-value" id="activePrintsCount">{{ snapshot.active_prints if snapshot else "--" }}</span>
         </div>
         <div class="metric">
-          <span class="metric-label">Active errors</span>
+          <span class="metric-label">Errors</span>
           <span class="metric-value" id="activeErrorsCount">{{ snapshot.active_errors if snapshot else "--" }}</span>
         </div>
         <div class="metric">
-          <span class="metric-label">Aktuelle Leistung in W</span>
+          <span class="metric-label">Power (W)</span>
           <span class="metric-value" id="totalPowerNow">--</span>
         </div>
         <div class="metric">
-          <span class="metric-label">Heutiger Verbrauch in KWh</span>
+          <span class="metric-label">Today (kWh)</span>
           <span class="metric-value" id="totalEnergyToday">--</span>
         </div>
       </div>
@@ -45,32 +41,30 @@
 
   <section class="container grid">
     <article class="card reveal" style="animation-delay: 0.2s">
-      <h3>System defaults</h3>
-      <p class="muted">Settings row is auto-created and can be updated via API.</p>
+      <h3>System</h3>
+      <p class="muted">Defaults from settings.</p>
       <ul class="spec">
-        <li><span>Reload interval</span><strong id="settingsReload">--</strong></li>
+        <li><span>Reload</span><strong id="settingsReload">--</strong></li>
         <li><span>Kiosk layout</span><strong id="settingsLayout">--</strong></li>
       </ul>
     </article>
     <article class="card reveal" style="animation-delay: 0.3s">
-      <h3>Printer list</h3>
-      <p class="muted">Active printers from the database.</p>
+      <h3>Printers</h3>
+      <p class="muted">Active printers only.</p>
       <ul class="list" id="printerList">
         {% if active_printer_names %}
           {% for name in active_printer_names %}
             <li>{{ name }}</li>
           {% endfor %}
         {% else %}
-          <li class="muted">No active printers loaded yet.</li>
+          <li class="muted">No active printers.</li>
         {% endif %}
       </ul>
     </article>
     <article class="card reveal" style="animation-delay: 0.4s">
       <h3>Quick actions</h3>
       <div class="actions">
-        <a class="btn soft" href="/api/settings">Get settings</a>
-        <a class="btn soft" href="/api/printers">List printers</a>
-        <a class="btn soft" href="/api/users">List users</a>
+        <a class="btn soft" href="/printer-dashboard">Printer dash</a>
       </div>
     </article>
   </section>
@@ -157,7 +151,7 @@
       list.innerHTML = "";
       const listItems = activePrinters.length ? activePrinters : statuses;
       if (!listItems.length) {
-        list.innerHTML = "<li class=\"muted\">No active printers loaded yet.</li>";
+        list.innerHTML = "<li class=\"muted\">No active printers.</li>";
       } else {
         listItems.forEach((printer) => {
           const li = document.createElement("li");

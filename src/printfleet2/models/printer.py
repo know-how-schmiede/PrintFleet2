@@ -23,3 +23,4 @@ class Printer(Base):
     printer_type: Mapped[str | None] = mapped_column(String, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
+    group_id: Mapped[int | None] = mapped_column(Integer, nullable=True)

@@ -64,12 +64,16 @@ def _status(
     error_message: str | None = None,
     plug_label: str | None = None,
     plug_state: str | None = None,
+    target_hotend: float | None = None,
+    target_bed: float | None = None,
 ) -> dict:
     return {
         "label": label,
         "state": state,
         "temp_hotend": hotend,
         "temp_bed": bed,
+        "target_hotend": target_hotend,
+        "target_bed": target_bed,
         "job_name": job_name,
         "progress": progress,
         "elapsed": elapsed,
@@ -92,19 +96,23 @@ def _extract_moonraker_status(payload: dict | None) -> dict:
     return status
 
 
-def _extract_moonraker_temps(status: dict) -> tuple[float | None, float | None]:
+def _extract_moonraker_temps(status: dict) -> tuple[float | None, float | None, float | None, float | None]:
     hotend = None
+    hotend_target = None
     for key, data in status.items():
         if not key.startswith("extruder") or not isinstance(data, dict):
             continue
         hotend = _coerce_temp(data.get("temperature"))
-        if hotend is not None:
+        hotend_target = _coerce_temp(data.get("target"))
+        if hotend is not None or hotend_target is not None:
             break
     bed = None
+    bed_target = None
     bed_data = status.get("heater_bed")
     if isinstance(bed_data, dict):
         bed = _coerce_temp(bed_data.get("temperature"))
-    return hotend, bed
+        bed_target = _coerce_temp(bed_data.get("target"))
+    return hotend, bed, hotend_target, bed_target
 
 
 def _extract_moonraker_job(status: dict) -> tuple[str | None, float | None, float | None, float | None, str | None]:
@@ -157,28 +165,33 @@ def _normalize_job_state(state: str | None) -> tuple[str | None, str | None]:
     return state, None
 
 
-def _extract_octoprint_temps(payload: dict | None) -> tuple[float | None, float | None]:
+def _extract_octoprint_temps(payload: dict | None) -> tuple[float | None, float | None, float | None, float | None]:
     if not isinstance(payload, dict):
-        return None, None
+        return None, None, None, None
     temperature = payload.get("temperature")
     if not isinstance(temperature, dict):
-        return None, None
+        return None, None, None, None
     hotend = None
+    hotend_target = None
     tool0 = temperature.get("tool0")
     if isinstance(tool0, dict):
         hotend = _coerce_temp(tool0.get("actual"))
+        hotend_target = _coerce_temp(tool0.get("target"))
     if hotend is None:
         for key, data in temperature.items():
             if not key.startswith("tool") or not isinstance(data, dict):
                 continue
             hotend = _coerce_temp(data.get("actual"))
-            if hotend is not None:
+            hotend_target = _coerce_temp(data.get("target"))
+            if hotend is not None or hotend_target is not None:
                 break
     bed = None
+    bed_target = None
     bed_data = temperature.get("bed")
     if isinstance(bed_data, dict):
         bed = _coerce_temp(bed_data.get("actual"))
-    return hotend, bed
+        bed_target = _coerce_temp(bed_data.get("target"))
+    return hotend, bed, hotend_target, bed_target
 
 
 def _moonraker_status(printer: PrinterSnapshot, plug_label: str | None, plug_state: str | None) -> dict:
@@ -201,7 +214,7 @@ def _moonraker_status(printer: PrinterSnapshot, plug_label: str | None, plug_sta
         headers,
     )[1]
     status = _extract_moonraker_status(objects_payload)
-    hotend, bed = _extract_moonraker_temps(status)
+    hotend, bed, target_hotend, target_bed = _extract_moonraker_temps(status)
     job_name, progress, elapsed, remaining, error_message = _extract_moonraker_job(status)
     job_state = None
     print_stats = status.get("print_stats")
@@ -231,6 +244,8 @@ def _moonraker_status(printer: PrinterSnapshot, plug_label: str | None, plug_sta
                 error_message,
                 plug_label=plug_label,
                 plug_state=plug_state,
+                target_hotend=target_hotend,
+                target_bed=target_bed,
             )
     return _status(
         job_label or "Online",
@@ -244,6 +259,8 @@ def _moonraker_status(printer: PrinterSnapshot, plug_label: str | None, plug_sta
         error_message,
         plug_label=plug_label,
         plug_state=plug_state,
+        target_hotend=target_hotend,
+        target_bed=target_bed,
     )
 
 
@@ -257,7 +274,7 @@ def _octoprint_status(printer: PrinterSnapshot, plug_label: str | None, plug_sta
         return _status("API key invalid", "warn", plug_label=plug_label, plug_state=plug_state)
     if not payload or status_code is None:
         return _status("Offline", "error", plug_label=plug_label, plug_state=plug_state)
-    hotend, bed = _extract_octoprint_temps(payload if isinstance(payload, dict) else None)
+    hotend, bed, target_hotend, target_bed = _extract_octoprint_temps(payload if isinstance(payload, dict) else None)
     job_payload = _fetch_json(f"{_printer_base_url(printer)}/api/job", headers)[1]
     job_name = None
     progress = None
@@ -302,6 +319,8 @@ def _octoprint_status(printer: PrinterSnapshot, plug_label: str | None, plug_sta
                 error_message,
                 plug_label=plug_label,
                 plug_state=plug_state,
+                target_hotend=target_hotend,
+                target_bed=target_bed,
             )
     return _status(
         job_label or "Online",
@@ -315,6 +334,8 @@ def _octoprint_status(printer: PrinterSnapshot, plug_label: str | None, plug_sta
         error_message,
         plug_label=plug_label,
         plug_state=plug_state,
+        target_hotend=target_hotend,
+        target_bed=target_bed,
     )
 
 

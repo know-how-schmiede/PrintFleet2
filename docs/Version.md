@@ -1,5 +1,14 @@
 # PrintFleet2 Versions
 
+## 0.6.10 - 2026-1-2
+
+- Printerliste auf Dashboard
+- Home und Printerdashboard auf Englisch
+- Printergruppen Verwaltung
+- Printergruppen in Printerform
+- Printer Dashboard: Sortierung nach Printergruppen
+- Buttons "Settings", "Printers", "Users" und "Docs" entfernt
+
 ## 0.6.9 - 2026-1-1
 
 - aktuelle Leistung und heute verbrauchte Leistung in Wh als ToolTip auf IP-Adresse TasmotaSteckdose
@@ -12,7 +21,7 @@
 - Sortierung Configured printers
 - Sortierung Net Scan
 - Sortierrichtung mit Buttons
-- Sorttierung IP-Adressen Numerische Sortierung
+- Sortierung IP-Adressen Numerische Sortierung
 
 ## 0.6.7 - 2026-1-1
 

@@ -5,6 +5,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const exportBtn = document.getElementById("settingsExport");
   const importBtn = document.getElementById("settingsImport");
   const importFile = document.getElementById("settingsImportFile");
+  const groupForm = document.getElementById("printerGroupForm");
+  const groupNotice = document.getElementById("printerGroupNotice");
+  const groupIdField = document.getElementById("printerGroupId");
+  const groupNameField = document.getElementById("printerGroupName");
+  const groupDescriptionField = document.getElementById("printerGroupDescription");
+  const groupResetBtn = document.getElementById("printerGroupReset");
+  const groupSubmitBtn = document.getElementById("printerGroupSubmit");
+  const groupTable = document.getElementById("printerGroupTable");
 
   if (!form || !notice || !resetBtn) {
     return;
@@ -95,6 +103,17 @@ document.addEventListener("DOMContentLoaded", () => {
     notice.className = "notice " + (type || "");
     if (!message) {
       notice.className = "notice";
+    }
+  }
+
+  function setGroupNotice(message, type) {
+    if (!groupNotice) {
+      return;
+    }
+    groupNotice.textContent = message;
+    groupNotice.className = "notice " + (type || "");
+    if (!message) {
+      groupNotice.className = "notice";
     }
   }
 
@@ -442,4 +461,138 @@ document.addEventListener("DOMContentLoaded", () => {
 
   bindRtspListeners();
   loadSettings();
+
+  if (groupForm && groupNameField && groupDescriptionField && groupTable) {
+    function normalizeGroupName(value) {
+      if (typeof value !== "string") {
+        return "";
+      }
+      return value.trim();
+    }
+
+    function fillGroupForm(group) {
+      if (!group) {
+        return;
+      }
+      if (groupIdField) {
+        groupIdField.value = group.id || "";
+      }
+      groupNameField.value = group.name || "";
+      groupDescriptionField.value = group.description || "";
+      if (groupSubmitBtn) {
+        groupSubmitBtn.textContent = "Save group";
+      }
+    }
+
+    function clearGroupForm(options) {
+      const keepNotice = options && options.keepNotice;
+      if (groupIdField) {
+        groupIdField.value = "";
+      }
+      groupNameField.value = "";
+      groupDescriptionField.value = "";
+      if (groupSubmitBtn) {
+        groupSubmitBtn.textContent = "Create group";
+      }
+      if (!keepNotice) {
+        setGroupNotice("", "");
+      }
+    }
+
+    function renderGroupTable(items) {
+      groupTable.innerHTML = "";
+      if (!items.length) {
+        groupTable.innerHTML = "<tr><td colspan=\"3\" class=\"muted\">No groups yet.</td></tr>";
+        return;
+      }
+      items.forEach((group) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${group.name}</td>
+          <td>${group.description || "-"}</td>
+          <td>
+            <button class="btn small" data-action="edit" type="button">Edit</button>
+            <button class="btn small danger" data-action="delete" type="button">Delete</button>
+          </td>
+        `;
+        const editBtn = row.querySelector('[data-action="edit"]');
+        const deleteBtn = row.querySelector('[data-action="delete"]');
+        if (editBtn) {
+          editBtn.addEventListener("click", () => fillGroupForm(group));
+        }
+        if (deleteBtn) {
+          deleteBtn.addEventListener("click", async () => {
+            if (!confirm(`Delete group ${group.name}?`)) {
+              return;
+            }
+            const res = await fetch(`/api/printer-groups/${group.id}`, { method: "DELETE" });
+            if (!res.ok) {
+              setGroupNotice("Failed to delete group.", "error");
+              return;
+            }
+            const data = await res.json().catch(() => ({}));
+            const cleared = Number(data.cleared_printers || 0);
+            if (groupIdField && groupIdField.value && Number(groupIdField.value) === group.id) {
+              clearGroupForm({ keepNotice: true });
+            }
+            setGroupNotice(
+              cleared ? `Group deleted. ${cleared} printer(s) cleared.` : "Group deleted.",
+              "success"
+            );
+            loadPrinterGroups();
+          });
+        }
+        groupTable.appendChild(row);
+      });
+    }
+
+    async function loadPrinterGroups() {
+      setGroupNotice("", "");
+      const res = await fetch("/api/printer-groups");
+      if (!res.ok) {
+        setGroupNotice("Failed to load groups.", "error");
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      const items = Array.isArray(data.items) ? data.items : [];
+      renderGroupTable(items);
+    }
+
+    groupForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const name = normalizeGroupName(groupNameField.value);
+      if (!name) {
+        setGroupNotice("Group name is required.", "error");
+        return;
+      }
+      const payload = {
+        name,
+        description: groupDescriptionField.value.trim() || null,
+      };
+      const groupId = groupIdField && groupIdField.value ? Number(groupIdField.value) : null;
+      const method = groupId ? "PATCH" : "POST";
+      const url = groupId ? `/api/printer-groups/${groupId}` : "/api/printer-groups";
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const message = data.error === "name_exists" ? "Group name already exists." : "Failed to save group.";
+        setGroupNotice(message, "error");
+        return;
+      }
+      clearGroupForm({ keepNotice: true });
+      setGroupNotice(groupId ? "Group updated." : "Group created.", "success");
+      loadPrinterGroups();
+    });
+
+    if (groupResetBtn) {
+      groupResetBtn.addEventListener("click", () => clearGroupForm());
+    }
+
+    clearGroupForm({ keepNotice: true });
+    loadPrinterGroups();
+  }
 });

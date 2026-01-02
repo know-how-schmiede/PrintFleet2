@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const netScanNotice = document.getElementById("netScanNotice");
   const netScanTable = document.getElementById("netScanTable");
   const netScanTimestamp = document.getElementById("netScanTimestamp");
+  const groupSelect = document.getElementById("printerGroupId");
   const sortButtons = Array.from(document.querySelectorAll("[data-sort]"));
   const netSortButtons = Array.from(document.querySelectorAll("[data-net-sort]"));
   const netScanFilters = [
@@ -96,6 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
       api_key: optionalText(raw.api_key),
       tasmota_host: optionalText(raw.tasmota_host),
       tasmota_topic: optionalText(raw.tasmota_topic),
+      group_id: Number.isFinite(Number(raw.group_id)) ? Number(raw.group_id) : null,
       https: !!raw.https,
       enabled: raw.enabled !== undefined ? !!raw.enabled : true,
       scanning:
@@ -209,6 +211,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let netSortState = { key: null, direction: "asc" };
   let plugEnergyCache = new Map();
   let plugEnergyLoaded = false;
+  let printerGroupsCache = [];
   let tasmotaTooltip = null;
   let tasmotaTooltipAnchor = null;
   let tasmotaTooltipPointer = { x: 0, y: 0 };
@@ -389,6 +392,49 @@ document.addEventListener("DOMContentLoaded", () => {
     refreshTasmotaTooltip();
   }
 
+  function renderGroupOptions(selectedId) {
+    if (!groupSelect) {
+      return;
+    }
+    const currentValue = selectedId !== undefined ? selectedId : groupSelect.value;
+    groupSelect.innerHTML = "";
+    const emptyOption = document.createElement("option");
+    emptyOption.value = "";
+    emptyOption.textContent = "No group";
+    groupSelect.appendChild(emptyOption);
+    printerGroupsCache.forEach((group) => {
+      const option = document.createElement("option");
+      option.value = String(group.id);
+      option.textContent = group.name;
+      groupSelect.appendChild(option);
+    });
+    const normalized = currentValue !== null && currentValue !== undefined ? String(currentValue) : "";
+    if (normalized && !groupSelect.querySelector(`option[value="${normalized}"]`)) {
+      const option = document.createElement("option");
+      option.value = normalized;
+      option.textContent = `Unknown (${normalized})`;
+      groupSelect.appendChild(option);
+    }
+    groupSelect.value = normalized;
+  }
+
+  async function loadPrinterGroups() {
+    if (!groupSelect) {
+      return;
+    }
+    try {
+      const res = await fetch("/api/printer-groups");
+      if (!res.ok) {
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      printerGroupsCache = Array.isArray(data.items) ? data.items : [];
+      renderGroupOptions();
+    } catch (error) {
+      // ignore group load failures
+    }
+  }
+
   function renderPrinterTable(items) {
     const table = document.getElementById("printerTable");
     table.innerHTML = "";
@@ -561,6 +607,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function formData() {
     const errorIntervalValue = Number(document.getElementById("printerErrorInterval").value || 30);
+    const groupValue = groupSelect ? groupSelect.value : "";
+    const parsedGroup = groupValue ? Number(groupValue) : null;
     return {
       name: document.getElementById("printerName").value.trim(),
       backend: document.getElementById("printerBackend").value,
@@ -577,6 +625,7 @@ document.addEventListener("DOMContentLoaded", () => {
       https: document.getElementById("printerHttps").checked,
       enabled: document.getElementById("printerEnabled").checked,
       scanning: document.getElementById("printerScanning").checked,
+      group_id: Number.isFinite(parsedGroup) ? parsedGroup : null,
     };
   }
 
@@ -601,6 +650,9 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("printerEnabled").checked = !!printer.enabled;
     document.getElementById("printerScanning").checked =
       printer.scanning !== undefined ? !!printer.scanning : !printer.no_scanning;
+    if (groupSelect) {
+      renderGroupOptions(printer.group_id);
+    }
     submitBtn.textContent = "Save changes";
   }
 
@@ -622,6 +674,9 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("printerHttps").checked = false;
     document.getElementById("printerEnabled").checked = true;
     document.getElementById("printerScanning").checked = true;
+    if (groupSelect) {
+      renderGroupOptions("");
+    }
     submitBtn.textContent = "Create printer";
     if (!keepNotice) {
       setNotice("", "");
@@ -629,6 +684,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function loadPrinters() {
+    await loadPrinterGroups();
     const res = await fetch("/api/printers");
     const data = res.ok ? await res.json() : { items: [] };
     if (!res.ok) {

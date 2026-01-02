@@ -5,14 +5,24 @@ from datetime import datetime, timezone
 from flask import Blueprint, request, session as flask_session, Response, render_template, redirect, stream_with_context, url_for
 
 from printfleet2.db.session import session_scope
+from printfleet2.models.printer import Printer
 from printfleet2.services.printer_service import (
     create_printer,
     delete_printer,
+    ensure_printer_schema,
     get_printer,
     list_printers,
     printer_to_dict,
     printers_to_dict,
     update_printer,
+)
+from printfleet2.services.printer_group_service import (
+    create_printer_group,
+    get_printer_group,
+    get_printer_group_by_name,
+    list_printer_groups,
+    normalize_group_name,
+    printer_group_to_dict,
 )
 from printfleet2.services.printer_status_service import (
     build_printer_snapshots,
@@ -245,6 +255,8 @@ def build_live_wall_printers(printers) -> list[dict]:
                 "state": "muted",
                 "temp_hotend": None,
                 "temp_bed": None,
+                "target_hotend": None,
+                "target_bed": None,
                 "job_name": None,
                 "progress": None,
                 "elapsed": None,
@@ -267,6 +279,8 @@ def build_live_wall_printers(printers) -> list[dict]:
                 "status_state": status["state"],
                 "temp_hotend": status.get("temp_hotend"),
                 "temp_bed": status.get("temp_bed"),
+                "target_hotend": status.get("target_hotend"),
+                "target_bed": status.get("target_bed"),
                 "job_name": status.get("job_name"),
                 "progress": status.get("progress"),
                 "elapsed": status.get("elapsed"),
@@ -362,6 +376,24 @@ def clean_optional(value: object | None) -> str | None:
     return value or None
 
 
+def normalize_group_id(payload: dict, session) -> tuple[bool, int | None, dict | None]:
+    if "group_id" not in payload:
+        return False, None, None
+    raw_value = payload.get("group_id")
+    if raw_value in (None, ""):
+        return True, None, None
+    try:
+        group_id = int(raw_value)
+    except (TypeError, ValueError):
+        return True, None, {"error": "invalid_group_id"}
+    if group_id <= 0:
+        return True, None, {"error": "invalid_group_id"}
+    group = get_printer_group(session, group_id)
+    if group is None:
+        return True, None, {"error": "group_not_found"}
+    return True, group_id, None
+
+
 @bp.get("/")
 def index():
     with session_scope() as session:
@@ -399,6 +431,41 @@ def index():
     )
 
 
+@bp.get("/printer-dashboard")
+def printer_dashboard_page():
+    with session_scope() as session:
+        printers = list_printers(session)
+        enabled_printers = [printer for printer in printers if printer.enabled]
+        snapshots = build_printer_snapshots(enabled_printers)
+    status_map = collect_printer_statuses(snapshots, include_plug=False)
+    active_prints = 0
+    active_errors = 0
+    for printer in snapshots:
+        status = status_map.get(
+            printer.id,
+            {
+                "label": "Unknown",
+                "state": "muted",
+                "error_message": None,
+            },
+        )
+        label = status.get("label")
+        if isinstance(label, str) and "printing" in label.lower():
+            active_prints += 1
+        error_message = status.get("error_message")
+        if status.get("state") == "error" or (isinstance(error_message, str) and error_message.strip()):
+            active_errors += 1
+    snapshot = {
+        "total_printers": len(printers),
+        "active_prints": active_prints,
+        "active_errors": active_errors,
+    }
+    return render_template(
+        "printer_dashboard.html",
+        snapshot=snapshot,
+    )
+
+
 @bp.get("/api/settings")
 def get_settings():
     with session_scope() as session:
@@ -425,6 +492,69 @@ def get_printers():
         return {"items": printers_to_dict(printers)}
 
 
+@bp.get("/api/printer-groups")
+def get_printer_groups():
+    with session_scope() as session:
+        groups = list_printer_groups(session)
+        return {"items": [printer_group_to_dict(group) for group in groups]}
+
+
+@bp.post("/api/printer-groups")
+def post_printer_group():
+    payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return {"error": "invalid_json"}, 400
+    name = normalize_group_name(payload.get("name"))
+    if not name:
+        return {"error": "missing_name"}, 400
+    description = clean_optional(payload.get("description"))
+    with session_scope() as session:
+        existing = get_printer_group_by_name(session, name)
+        if existing is not None:
+            return {"error": "name_exists"}, 409
+        group = create_printer_group(session, name, description)
+        return printer_group_to_dict(group), 201
+
+
+@bp.put("/api/printer-groups/<int:group_id>")
+@bp.patch("/api/printer-groups/<int:group_id>")
+def put_printer_group(group_id: int):
+    payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return {"error": "invalid_json"}, 400
+    with session_scope() as session:
+        group = get_printer_group(session, group_id)
+        if group is None:
+            return {"error": "not_found"}, 404
+        if "name" in payload:
+            name_value = normalize_group_name(payload.get("name"))
+            if not name_value:
+                return {"error": "missing_name"}, 400
+            existing = get_printer_group_by_name(session, name_value)
+            if existing is not None and existing.id != group.id:
+                return {"error": "name_exists"}, 409
+            group.name = name_value
+        if "description" in payload:
+            group.description = clean_optional(payload.get("description"))
+        return printer_group_to_dict(group)
+
+
+@bp.delete("/api/printer-groups/<int:group_id>")
+def delete_printer_group(group_id: int):
+    with session_scope() as session:
+        group = get_printer_group(session, group_id)
+        if group is None:
+            return {"error": "not_found"}, 404
+        ensure_printer_schema(session)
+        cleared = (
+            session.query(Printer)
+            .filter(Printer.group_id == group_id)
+            .update({Printer.group_id: None})
+        )
+        session.delete(group)
+        return {"status": "deleted", "cleared_printers": cleared or 0}
+
+
 @bp.get("/api/live-wall/status")
 def live_wall_status():
     with session_scope() as session:
@@ -443,6 +573,8 @@ def live_wall_status():
                 "state": "muted",
                 "temp_hotend": None,
                 "temp_bed": None,
+                "target_hotend": None,
+                "target_bed": None,
                 "job_name": None,
                 "progress": None,
                 "elapsed": None,
@@ -458,6 +590,8 @@ def live_wall_status():
                 "status_state": status["state"],
                 "temp_hotend": status.get("temp_hotend"),
                 "temp_bed": status.get("temp_bed"),
+                "target_hotend": status.get("target_hotend"),
+                "target_bed": status.get("target_bed"),
                 "job_name": status.get("job_name"),
                 "progress": status.get("progress"),
                 "elapsed": status.get("elapsed"),
@@ -534,6 +668,11 @@ def post_printer():
         if not payload.get(field):
             return {"error": "missing_field", "field": field}, 400
     with session_scope() as session:
+        has_group, group_id, error = normalize_group_id(payload, session)
+        if error:
+            return error, 400 if error.get("error") == "invalid_group_id" else 404
+        if has_group:
+            payload["group_id"] = group_id
         printer = create_printer(session, payload)
         return printer_to_dict(printer), 201
 
@@ -548,6 +687,11 @@ def put_printer(printer_id: int):
         printer = get_printer(session, printer_id)
         if printer is None:
             return {"error": "not_found"}, 404
+        has_group, group_id, error = normalize_group_id(payload, session)
+        if error:
+            return error, 400 if error.get("error") == "invalid_group_id" else 404
+        if has_group:
+            payload["group_id"] = group_id
         update_printer(session, printer, payload)
         return printer_to_dict(printer)
 
@@ -790,6 +934,11 @@ def api_docs():
             {"method": "PUT", "path": "/api/printers/{id}"},
             {"method": "PATCH", "path": "/api/printers/{id}"},
             {"method": "DELETE", "path": "/api/printers/{id}"},
+            {"method": "GET", "path": "/api/printer-groups"},
+            {"method": "POST", "path": "/api/printer-groups"},
+            {"method": "PUT", "path": "/api/printer-groups/{id}"},
+            {"method": "PATCH", "path": "/api/printer-groups/{id}"},
+            {"method": "DELETE", "path": "/api/printer-groups/{id}"},
             {"method": "GET", "path": "/api/users"},
             {"method": "GET", "path": "/api/users/export"},
             {"method": "POST", "path": "/api/users/import"},
