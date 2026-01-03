@@ -20,7 +20,7 @@ apt install -y sudo git python3 python3-venv python3-pip build-essential ffmpeg 
 
 ```bash
 cd /root
-git clone https://github.com/NeoFab/PrintFleet2.git printfleet2
+git clone https://github.com/know-how-schmiede/PrintFleet2.git printfleet2
 cd /root/printfleet2
 ```
 

@@ -109,7 +109,7 @@ else
     echo "ERROR: ${REPO_DIR} exists but does not look like PrintFleet2."
     exit 1
   fi
-  REPO_URL="$(prompt "Git-Repository (URL)" "https://github.com/NeoFab/PrintFleet2.git")"
+  REPO_URL="$(prompt "Git-Repository (URL)" "https://github.com/know-how-schmiede/PrintFleet2.git")"
   mkdir -p "$REPO_DIR"
   chown -R "${SERVICE_USER}:${SERVICE_USER}" "$REPO_DIR"
   ensure_repo_access
