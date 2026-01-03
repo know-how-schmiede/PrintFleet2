@@ -18,6 +18,35 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
+  const tabButtons = Array.from(document.querySelectorAll("[data-settings-tab]"));
+  const tabPanels = Array.from(document.querySelectorAll("[data-settings-panel]"));
+
+  function activateTab(targetId) {
+    tabButtons.forEach((button) => {
+      const isActive = button.dataset.settingsTab === targetId;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-selected", isActive ? "true" : "false");
+      button.tabIndex = isActive ? 0 : -1;
+    });
+    tabPanels.forEach((panel) => {
+      const isActive = panel.id === targetId;
+      panel.classList.toggle("is-active", isActive);
+      panel.hidden = !isActive;
+    });
+  }
+
+  if (tabButtons.length && tabPanels.length) {
+    tabButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        activateTab(button.dataset.settingsTab);
+      });
+    });
+    const initialTab =
+      tabButtons.find((button) => button.classList.contains("is-active"))?.dataset.settingsTab ||
+      tabButtons[0].dataset.settingsTab;
+    activateTab(initialTab);
+  }
+
   const fields = {
     poll_interval: "settingPollInterval",
     db_reload_interval: "settingReloadInterval",

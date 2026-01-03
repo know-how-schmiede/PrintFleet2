@@ -13,221 +13,247 @@
     <div id="settingsNotice" class="notice"></div>
 
     <form id="settingsForm" class="stack">
-      <div class="card stack">
-        <h3>General</h3>
-        <p class="muted">Core intervals and localization options.</p>
-        <div class="form-grid">
-          <label>
-            Language
-            <input type="text" id="settingLanguage" placeholder="en">
-          </label>
-          <label>
-            Theme
-            <select id="settingTheme">
-              <option value="lightTheme">Light Theme</option>
-              <option value="darkTheme">Dark Theme</option>
-            </select>
-          </label>
-          <label>
-            Poll interval (seconds)
-            <input type="number" id="settingPollInterval" min="0" step="0.1">
-          </label>
-          <label>
-            DB reload interval (seconds)
-            <input type="number" id="settingReloadInterval" min="0" step="0.1">
-          </label>
-          <label>
-            Tasmota poll interval (seconds)
-            <input type="number" id="settingLiveWallPlugPollInterval" min="1" step="1" placeholder="5">
-          </label>
-          <label>
-            Telegram chat ID
-            <input type="text" id="settingTelegramChatId">
-          </label>
+      <div class="tabs">
+        <div class="tab-list" role="tablist" aria-label="Settings sections">
+          <button class="tab-button is-active" type="button" role="tab" id="settings-tab-general-btn" aria-controls="settings-tab-general" aria-selected="true" data-settings-tab="settings-tab-general">
+            General
+          </button>
+          <button class="tab-button" type="button" role="tab" id="settings-tab-livewall-btn" aria-controls="settings-tab-livewall" aria-selected="false" data-settings-tab="settings-tab-livewall">
+            Live-Wall
+          </button>
+          <button class="tab-button" type="button" role="tab" id="settings-tab-legal-btn" aria-controls="settings-tab-legal" aria-selected="false" data-settings-tab="settings-tab-legal">
+            Legal
+          </button>
         </div>
-      </div>
 
-      <div class="card stack">
-        <h3>Live-Wall</h3>
-        <p class="muted">Configure stream sources and camera credentials.</p>
-
-        <details class="stream-section">
-          <summary>Stream 1</summary>
-          <div class="form-grid">
-            <label class="stream-url">
-              Stream URL
-              <input type="text" id="settingKioskStreamUrl1">
-            </label>
-            <label class="stream-title">
-              Stream title
-              <input type="text" id="settingKioskStreamTitle1" placeholder="Stream 1">
-            </label>
-            <label class="stream-generated">
-              Generierte RTSP-URL 1
-              <input type="text" id="settingKioskGeneratedRtsp1" readonly placeholder="rtsp://user:pass@host:554/stream1">
-              <span class="muted hint">Aus den Kamera-Daten erzeugt (rtsp://.../stream1). Fuer den Kiosk eine HLS/MJPEG-URL nutzen.</span>
-            </label>
-            <label class="checkbox stream-active">
-              <input type="checkbox" id="settingKioskStreamActive1">
-              Active
-            </label>
-            <label class="stream-host">
-              Camera host
-              <input type="text" id="settingKioskCameraHost1">
-            </label>
-            <label>
-              Camera user
-              <input type="text" id="settingKioskCameraUser1" autocomplete="username">
-            </label>
-            <label>
-              Camera password
-              <input type="password" id="settingKioskCameraPassword1" autocomplete="new-password">
-            </label>
-          </div>
-        </details>
-
-        <details class="stream-section">
-          <summary>Stream 2</summary>
-          <div class="form-grid">
-            <label class="stream-url">
-              Stream URL
-              <input type="text" id="settingKioskStreamUrl2">
-            </label>
-            <label class="stream-title">
-              Stream title
-              <input type="text" id="settingKioskStreamTitle2" placeholder="Stream 2">
-            </label>
-            <label class="stream-generated">
-              Generierte RTSP-URL 2
-              <input type="text" id="settingKioskGeneratedRtsp2" readonly placeholder="rtsp://user:pass@host:554/stream1">
-              <span class="muted hint">Aus den Kamera-Daten erzeugt (rtsp://.../stream1). Fuer den Kiosk eine HLS/MJPEG-URL nutzen.</span>
-            </label>
-            <label class="checkbox stream-active">
-              <input type="checkbox" id="settingKioskStreamActive2">
-              Active
-            </label>
-            <label class="stream-host">
-              Camera host
-              <input type="text" id="settingKioskCameraHost2">
-            </label>
-            <label>
-              Camera user
-              <input type="text" id="settingKioskCameraUser2" autocomplete="username">
-            </label>
-            <label>
-              Camera password
-              <input type="password" id="settingKioskCameraPassword2" autocomplete="new-password">
-            </label>
-          </div>
-        </details>
-
-        <details class="stream-section">
-          <summary>Stream 3</summary>
-          <div class="form-grid">
-            <label class="stream-url">
-              Stream URL
-              <input type="text" id="settingKioskStreamUrl3">
-            </label>
-            <label class="stream-title">
-              Stream title
-              <input type="text" id="settingKioskStreamTitle3" placeholder="Stream 3">
-            </label>
-            <label class="stream-generated">
-              Generierte RTSP-URL 3
-              <input type="text" id="settingKioskGeneratedRtsp3" readonly placeholder="rtsp://user:pass@host:554/stream1">
-              <span class="muted hint">Aus den Kamera-Daten erzeugt (rtsp://.../stream1). Fuer den Kiosk eine HLS/MJPEG-URL nutzen.</span>
-            </label>
-            <label class="checkbox stream-active">
-              <input type="checkbox" id="settingKioskStreamActive3">
-              Active
-            </label>
-            <label class="stream-host">
-              Camera host
-              <input type="text" id="settingKioskCameraHost3">
-            </label>
-            <label>
-              Camera user
-              <input type="text" id="settingKioskCameraUser3" autocomplete="username">
-            </label>
-            <label>
-              Camera password
-              <input type="password" id="settingKioskCameraPassword3" autocomplete="new-password">
-            </label>
-          </div>
-        </details>
-
-        <details class="stream-section">
-          <summary>Stream 4</summary>
-          <div class="form-grid">
-            <label class="stream-url">
-              Stream URL
-              <input type="text" id="settingKioskStreamUrl4">
-            </label>
-            <label class="stream-title">
-              Stream title
-              <input type="text" id="settingKioskStreamTitle4" placeholder="Stream 4">
-            </label>
-            <label class="stream-generated">
-              Generierte RTSP-URL 4
-              <input type="text" id="settingKioskGeneratedRtsp4" readonly placeholder="rtsp://user:pass@host:554/stream1">
-              <span class="muted hint">Aus den Kamera-Daten erzeugt (rtsp://.../stream1). Fuer den Kiosk eine HLS/MJPEG-URL nutzen.</span>
-            </label>
-            <label class="checkbox stream-active">
-              <input type="checkbox" id="settingKioskStreamActive4">
-              Active
-            </label>
-            <label class="stream-host">
-              Camera host
-              <input type="text" id="settingKioskCameraHost4">
-            </label>
-            <label>
-              Camera user
-              <input type="text" id="settingKioskCameraUser4" autocomplete="username">
-            </label>
-            <label>
-              Camera password
-              <input type="password" id="settingKioskCameraPassword4" autocomplete="new-password">
-            </label>
-          </div>
-        </details>
-
-        <div class="stream-section printer-layout">
-          <h4>Printer layout</h4>
-          <div class="form-grid">
-            <label class="printer-columns printer-layout-select">
-              Printers per row
-              <select id="settingLiveWallPrinterColumns">
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3" selected>3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-              </select>
-            </label>
-            <label class="printer-data printer-layout-select">
-              Printer data
-              <select id="settingLiveWallPrinterData">
-                <option value="light">light Data</option>
-                <option value="normal" selected>normal Data</option>
-                <option value="all">all Data</option>
-              </select>
-            </label>
+        <div class="tab-panel is-active" id="settings-tab-general" role="tabpanel" aria-labelledby="settings-tab-general-btn" data-settings-panel>
+          <div class="card stack">
+            <h3>General</h3>
+            <p class="muted">Core intervals and localization options.</p>
+            <div class="stack">
+              <div class="form-grid">
+                <label>
+                  Theme
+                  <select id="settingTheme">
+                    <option value="lightTheme">Light Theme</option>
+                    <option value="darkTheme">Dark Theme</option>
+                  </select>
+                </label>
+                <label>
+                  Language
+                  <input type="text" id="settingLanguage" placeholder="en">
+                </label>
+              </div>
+              <div class="form-grid">
+                <label>
+                  Poll interval (seconds)
+                  <input type="number" id="settingPollInterval" min="0" step="0.1">
+                </label>
+                <label>
+                  DB reload interval (seconds)
+                  <input type="number" id="settingReloadInterval" min="0" step="0.1">
+                </label>
+                <label>
+                  Tasmota poll interval (seconds)
+                  <input type="number" id="settingLiveWallPlugPollInterval" min="1" step="1" placeholder="5">
+                </label>
+              </div>
+              <div class="form-grid">
+                <label>
+                  Telegram chat ID
+                  <input type="text" id="settingTelegramChatId">
+                </label>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="card stack">
-        <h3>Legal</h3>
-        <p class="muted">Markdown content for imprint and privacy pages.</p>
-        <div class="form-grid">
-          <label class="full">
-            Imprint markdown
-            <textarea id="settingImprint" rows="5"></textarea>
-          </label>
-          <label class="full">
-            Privacy markdown
-            <textarea id="settingPrivacy" rows="5"></textarea>
-          </label>
+        <div class="tab-panel" id="settings-tab-livewall" role="tabpanel" aria-labelledby="settings-tab-livewall-btn" data-settings-panel hidden>
+          <div class="card stack">
+            <h3>Live-Wall</h3>
+            <p class="muted">Configure stream sources and camera credentials.</p>
+
+            <details class="stream-section">
+              <summary>Stream 1</summary>
+              <div class="form-grid">
+                <label class="stream-url">
+                  Stream URL
+                  <input type="text" id="settingKioskStreamUrl1">
+                </label>
+                <label class="stream-title">
+                  Stream title
+                  <input type="text" id="settingKioskStreamTitle1" placeholder="Stream 1">
+                </label>
+                <label class="stream-generated">
+                  Generated RTSP URL 1
+                  <input type="text" id="settingKioskGeneratedRtsp1" readonly placeholder="rtsp://user:pass@host:554/stream1">
+                  <span class="muted hint">Generated from camera fields (rtsp://.../stream1). For the kiosk use an HLS/MJPEG URL.</span>
+                </label>
+                <label class="checkbox stream-active">
+                  <input type="checkbox" id="settingKioskStreamActive1">
+                  Active
+                </label>
+                <label class="stream-host">
+                  Camera host
+                  <input type="text" id="settingKioskCameraHost1">
+                </label>
+                <label>
+                  Camera user
+                  <input type="text" id="settingKioskCameraUser1" autocomplete="username">
+                </label>
+                <label>
+                  Camera password
+                  <input type="password" id="settingKioskCameraPassword1" autocomplete="new-password">
+                </label>
+              </div>
+            </details>
+
+            <details class="stream-section">
+              <summary>Stream 2</summary>
+              <div class="form-grid">
+                <label class="stream-url">
+                  Stream URL
+                  <input type="text" id="settingKioskStreamUrl2">
+                </label>
+                <label class="stream-title">
+                  Stream title
+                  <input type="text" id="settingKioskStreamTitle2" placeholder="Stream 2">
+                </label>
+                <label class="stream-generated">
+                  Generated RTSP URL 2
+                  <input type="text" id="settingKioskGeneratedRtsp2" readonly placeholder="rtsp://user:pass@host:554/stream1">
+                  <span class="muted hint">Generated from camera fields (rtsp://.../stream1). For the kiosk use an HLS/MJPEG URL.</span>
+                </label>
+                <label class="checkbox stream-active">
+                  <input type="checkbox" id="settingKioskStreamActive2">
+                  Active
+                </label>
+                <label class="stream-host">
+                  Camera host
+                  <input type="text" id="settingKioskCameraHost2">
+                </label>
+                <label>
+                  Camera user
+                  <input type="text" id="settingKioskCameraUser2" autocomplete="username">
+                </label>
+                <label>
+                  Camera password
+                  <input type="password" id="settingKioskCameraPassword2" autocomplete="new-password">
+                </label>
+              </div>
+            </details>
+
+            <details class="stream-section">
+              <summary>Stream 3</summary>
+              <div class="form-grid">
+                <label class="stream-url">
+                  Stream URL
+                  <input type="text" id="settingKioskStreamUrl3">
+                </label>
+                <label class="stream-title">
+                  Stream title
+                  <input type="text" id="settingKioskStreamTitle3" placeholder="Stream 3">
+                </label>
+                <label class="stream-generated">
+                  Generated RTSP URL 3
+                  <input type="text" id="settingKioskGeneratedRtsp3" readonly placeholder="rtsp://user:pass@host:554/stream1">
+                  <span class="muted hint">Generated from camera fields (rtsp://.../stream1). For the kiosk use an HLS/MJPEG URL.</span>
+                </label>
+                <label class="checkbox stream-active">
+                  <input type="checkbox" id="settingKioskStreamActive3">
+                  Active
+                </label>
+                <label class="stream-host">
+                  Camera host
+                  <input type="text" id="settingKioskCameraHost3">
+                </label>
+                <label>
+                  Camera user
+                  <input type="text" id="settingKioskCameraUser3" autocomplete="username">
+                </label>
+                <label>
+                  Camera password
+                  <input type="password" id="settingKioskCameraPassword3" autocomplete="new-password">
+                </label>
+              </div>
+            </details>
+
+            <details class="stream-section">
+              <summary>Stream 4</summary>
+              <div class="form-grid">
+                <label class="stream-url">
+                  Stream URL
+                  <input type="text" id="settingKioskStreamUrl4">
+                </label>
+                <label class="stream-title">
+                  Stream title
+                  <input type="text" id="settingKioskStreamTitle4" placeholder="Stream 4">
+                </label>
+                <label class="stream-generated">
+                  Generated RTSP URL 4
+                  <input type="text" id="settingKioskGeneratedRtsp4" readonly placeholder="rtsp://user:pass@host:554/stream1">
+                  <span class="muted hint">Generated from camera fields (rtsp://.../stream1). For the kiosk use an HLS/MJPEG URL.</span>
+                </label>
+                <label class="checkbox stream-active">
+                  <input type="checkbox" id="settingKioskStreamActive4">
+                  Active
+                </label>
+                <label class="stream-host">
+                  Camera host
+                  <input type="text" id="settingKioskCameraHost4">
+                </label>
+                <label>
+                  Camera user
+                  <input type="text" id="settingKioskCameraUser4" autocomplete="username">
+                </label>
+                <label>
+                  Camera password
+                  <input type="password" id="settingKioskCameraPassword4" autocomplete="new-password">
+                </label>
+              </div>
+            </details>
+
+            <div class="stream-section printer-layout">
+              <h4>Printer layout</h4>
+              <div class="form-grid">
+                <label class="printer-columns printer-layout-select">
+                  Printers per row
+                  <select id="settingLiveWallPrinterColumns">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3" selected>3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                  </select>
+                </label>
+                <label class="printer-data printer-layout-select">
+                  Printer data
+                  <select id="settingLiveWallPrinterData">
+                <option value="light">Light data</option>
+                <option value="normal" selected>Normal data</option>
+                <option value="all">All data</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="settings-tab-legal" role="tabpanel" aria-labelledby="settings-tab-legal-btn" data-settings-panel hidden>
+          <div class="card stack">
+            <h3>Legal</h3>
+            <p class="muted">Markdown content for imprint and privacy pages.</p>
+            <div class="form-grid">
+              <label class="full">
+                Imprint markdown
+                <textarea id="settingImprint" rows="5"></textarea>
+              </label>
+              <label class="full">
+                Privacy markdown
+                <textarea id="settingPrivacy" rows="5"></textarea>
+              </label>
+            </div>
+          </div>
         </div>
       </div>
 

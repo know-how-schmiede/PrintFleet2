@@ -11,7 +11,15 @@
         <p class="lead">Live impressions, live energy, live production.</p>
       </div>
       <div class="live-wall-meta">
-        <span class="live-wall-chip">Layout: {{ live_wall.layout }}</span>
+        {% set printer_data_label = live_wall.printer_data %}
+        {% if live_wall.printer_data == "light" %}
+          {% set printer_data_label = "light data" %}
+        {% elif live_wall.printer_data == "normal" %}
+          {% set printer_data_label = "normal data" %}
+        {% elif live_wall.printer_data == "all" %}
+          {% set printer_data_label = "all data" %}
+        {% endif %}
+        <span class="live-wall-chip">Layout: {{ printer_data_label }}</span>
         <span class="live-wall-chip">{{ live_wall.streams | length }} streams</span>
       </div>
     </div>

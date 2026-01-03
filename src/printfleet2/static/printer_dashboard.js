@@ -73,10 +73,15 @@ document.addEventListener("DOMContentLoaded", () => {
     return number.toFixed(1);
   }
 
-  function formatTempPair(hotend, bed) {
-    const hotendValue = formatTemp(hotend);
-    const bedValue = formatTemp(bed);
-    return `Hotend ${hotendValue} C / Bed ${bedValue} C`;
+  function createTempCell(hotend, bed) {
+    const td = document.createElement("td");
+    const hotendLine = document.createElement("div");
+    const bedLine = document.createElement("div");
+    hotendLine.textContent = `Hotend ${formatTemp(hotend)}C`;
+    bedLine.textContent = `Bed ${formatTemp(bed)}C`;
+    td.appendChild(hotendLine);
+    td.appendChild(bedLine);
+    return td;
   }
 
   function formatDuration(value) {
@@ -428,8 +433,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const row = document.createElement("tr");
       row.appendChild(createNameCell(printer, groupMap));
       row.appendChild(createStatusCell(status));
-      row.appendChild(createCell(formatTempPair(status.temp_hotend, status.temp_bed)));
-      row.appendChild(createCell(formatTempPair(status.target_hotend, status.target_bed)));
+      row.appendChild(createTempCell(status.temp_hotend, status.temp_bed));
+      row.appendChild(createTempCell(status.target_hotend, status.target_bed));
       row.appendChild(createCell(status.job_name || "--"));
       row.appendChild(createCell(formatDuration(status.elapsed)));
       row.appendChild(createCell(formatDuration(status.remaining)));

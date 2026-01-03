@@ -1,5 +1,14 @@
 # PrintFleet2 Versions
 
+## 0.6.12 - 2026-1-3
+
+- Settings mit Tab`s
+- Layout Anpassungen Tab "General"
+- Live-Wall - Layout-Beschriftung
+- Layout Anpassungen User Management
+- Design Anpassungen Kacheln "Active Printers"
+- Design Anpassungen Temperaturanzeige  Active Printers aus Printer Dashboard
+
 ## 0.6.11 - 2026-1-3
 
 - Setup-Scripte

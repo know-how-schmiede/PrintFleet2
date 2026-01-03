@@ -19,50 +19,56 @@
       <h3 id="userFormTitle">Create user</h3>
       <p class="muted" id="userFormHint">Username and password are required.</p>
       <div id="userNotice" class="notice"></div>
-      <form id="userForm" class="form-grid" data-first-user="{{ 'true' if first_user else 'false' }}">
+      <form id="userForm" class="stack" data-first-user="{{ 'true' if first_user else 'false' }}">
         <input type="hidden" id="userId">
-        <label>
-          Username
-          <input type="text" id="userName" required>
-        </label>
-        <label>
-          Password
-          <input type="password" id="userPassword" required>
-        </label>
-        <label>
-          First name
-          <input type="text" id="userFirstName" autocomplete="given-name">
-        </label>
-        <label>
-          Last name
-          <input type="text" id="userLastName" autocomplete="family-name">
-        </label>
-        <label>
-          Email
-          <input type="email" id="userEmail" autocomplete="email">
-        </label>
-        {% if first_user %}
+        <div class="form-grid">
           <label>
-            Role
-            <select id="userRoleDisplay" disabled>
-              <option value="superadmin" selected>SuperAdmin</option>
-            </select>
+            Username
+            <input type="text" id="userName" required>
           </label>
-          <input type="hidden" id="userRole" value="superadmin">
-        {% else %}
           <label>
-            Role
-            <select id="userRole">
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
-              <option value="superadmin">SuperAdmin</option>
-            </select>
+            Password
+            <input type="password" id="userPassword" required>
           </label>
-        {% endif %}
-        <label class="full">
-          Remarks
-          <textarea id="userNotes" rows="3"></textarea>
-        </label>
+          {% if first_user %}
+            <label>
+              Role
+              <select id="userRoleDisplay" disabled>
+                <option value="superadmin" selected>SuperAdmin</option>
+              </select>
+            </label>
+            <input type="hidden" id="userRole" value="superadmin">
+          {% else %}
+            <label>
+              Role
+              <select id="userRole">
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+                <option value="superadmin">SuperAdmin</option>
+              </select>
+            </label>
+          {% endif %}
+        </div>
+        <div class="form-grid">
+          <label>
+            First Name
+            <input type="text" id="userFirstName" autocomplete="given-name">
+          </label>
+          <label>
+            Last Name
+            <input type="text" id="userLastName" autocomplete="family-name">
+          </label>
+          <label>
+            Email
+            <input type="email" id="userEmail" autocomplete="email">
+          </label>
+        </div>
+        <div class="form-grid">
+          <label class="full">
+            Remarks
+            <textarea id="userNotes" rows="3"></textarea>
+          </label>
+        </div>
         <div class="form-actions">
           <button class="btn primary" type="submit" id="userSubmit">Create user</button>
           <button class="btn outline" type="button" id="userReset">Clear</button>
