@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$(id -u)" -ne 0 ]]; then
+  echo "ERROR: Run as root (sudo -i)."
+  exit 1
+fi
+
+BASE_DIR="${HOME:-/root}"
+
+prompt() {
+  local label="$1"
+  local default="$2"
+  local value=""
+  read -r -p "${label} [${default}]: " value
+  if [[ -z "$value" ]]; then
+    value="$default"
+  fi
+  printf '%s' "$value"
+}
+
+read_env_value() {
+  local file="$1"
+  local key="$2"
+  if [[ -f "$file" ]]; then
+    grep -E "^${key}=" "$file" | head -n 1 | cut -d= -f2-
+  fi
+}
+
+echo "PrintFleet2 Telegram setup."
+echo "Press Enter to accept defaults."
+echo
+
+DEFAULT_SERVICE_NAME="printfleet2"
+SERVICE_NAME="$(prompt "Service-Name" "$DEFAULT_SERVICE_NAME")"
+
+ENV_DIR="/etc/printfleet2"
+ENV_FILE="${ENV_DIR}/telegram.env"
+
+DEFAULT_TOKEN="$(read_env_value "$ENV_FILE" "PRINTFLEET2_TELEGRAM_BOT_TOKEN")"
+DEFAULT_CHAT_ID="$(read_env_value "$ENV_FILE" "PRINTFLEET2_TELEGRAM_CHAT_ID")"
+
+if [[ -z "$DEFAULT_TOKEN" ]]; then
+  DEFAULT_TOKEN="CHANGE_ME"
+fi
+if [[ -z "$DEFAULT_CHAT_ID" ]]; then
+  DEFAULT_CHAT_ID="CHANGE_ME"
+fi
+
+BOT_TOKEN="$(prompt "Telegram Bot Token" "$DEFAULT_TOKEN")"
+CHAT_ID="$(prompt "Telegram Chat ID" "$DEFAULT_CHAT_ID")"
+
+install -d -m 0750 "$ENV_DIR"
+
+cat > "$ENV_FILE" <<EOF
+PRINTFLEET2_TELEGRAM_BOT_TOKEN=${BOT_TOKEN}
+PRINTFLEET2_TELEGRAM_CHAT_ID=${CHAT_ID}
+EOF
+
+chmod 0640 "$ENV_FILE"
+
+override_dir="/etc/systemd/system/${SERVICE_NAME}.service.d"
+mkdir -p "$override_dir"
+
+cat > "${override_dir}/telegram.conf" <<EOF
+[Service]
+EnvironmentFile=${ENV_FILE}
+EOF
+
+systemctl daemon-reload
+
+if systemctl is-active --quiet "$SERVICE_NAME"; then
+  systemctl restart "$SERVICE_NAME"
+  echo "Service restarted: ${SERVICE_NAME}"
+else
+  echo "Service not running: ${SERVICE_NAME}"
+fi
+
+echo "Telegram environment configured."

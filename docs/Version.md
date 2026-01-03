@@ -1,5 +1,9 @@
 # PrintFleet2 Versions
 
+## 0.6.11 - 2026-1-3
+
+- Setup-Scripte
+
 ## 0.6.10 - 2026-1-2
 
 - Printerliste auf Dashboard
