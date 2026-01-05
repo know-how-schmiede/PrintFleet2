@@ -300,6 +300,10 @@ body {
   grid-column: span 2;
 }
 
+.stream-section .form-grid .stream-hls {
+  grid-column: span 2;
+}
+
 .stream-section .form-grid .stream-active {
   grid-column: 1 / -1;
 }
@@ -313,6 +317,12 @@ body {
 .stream-generated input[readonly] {
   background: rgba(15, 23, 42, 0.04);
   color: var(--muted);
+}
+
+.stream-hls-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .hint {

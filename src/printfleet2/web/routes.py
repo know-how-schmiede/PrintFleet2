@@ -1,6 +1,7 @@
 import shutil
 import subprocess
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 from flask import Blueprint, request, session as flask_session, Response, render_template, redirect, stream_with_context, url_for
 
@@ -140,6 +141,26 @@ def stream_type_for_url(url: str) -> str:
     return "iframe"
 
 
+def is_hls_url(url: str | None) -> bool:
+    if not url:
+        return False
+    lower = url.split("?", 1)[0].lower()
+    return lower.endswith(".m3u8")
+
+
+def is_hls_player_url(url: str | None) -> bool:
+    if not url:
+        return False
+    parsed = urlparse(url)
+    return parsed.path.lower().endswith("/live-wall/hls-player")
+
+
+def wrap_hls_player_url(url: str) -> str:
+    if is_hls_player_url(url) or not is_hls_url(url):
+        return url
+    return url_for("web.live_wall_hls_player", src=url)
+
+
 def build_live_wall_config(settings: dict) -> dict:
     streams: list[dict] = []
 
@@ -156,7 +177,7 @@ def build_live_wall_config(settings: dict) -> dict:
         url_value = clean_text(url)
         rtsp_value = clean_text(rtsp_url)
         if url_value:
-            final_url = url_value
+            final_url = wrap_hls_player_url(url_value)
         elif rtsp_value:
             final_url = url_for("web.live_wall_stream", stream_id=stream_id)
         else:
@@ -957,6 +978,16 @@ def api_docs():
 @bp.get("/docs")
 def docs_page():
     return render_template("docs.html")
+
+
+@bp.get("/live-wall/hls-player")
+def live_wall_hls_player():
+    source = clean_text(request.args.get("src"))
+    if source:
+        lower = source.lower()
+        if not (lower.startswith(("http://", "https://", "/"))):
+            source = None
+    return render_template("hls_player.html", source=source)
 
 
 @bp.get("/live-wall/stream/<int:stream_id>.mjpg")

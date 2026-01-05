@@ -249,6 +249,41 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function isHlsSourceUrl(value) {
+    if (!value) {
+      return false;
+    }
+    const base = value.split("?", 1)[0].toLowerCase();
+    return base.endsWith(".m3u8");
+  }
+
+  function buildHlsPlayerUrl(source) {
+    return `/live-wall/hls-player?src=${encodeURIComponent(source)}`;
+  }
+
+  function bindHlsPreviewButtons() {
+    const buttons = Array.from(document.querySelectorAll("[data-hls-preview][data-hls-source]"));
+    if (!buttons.length) {
+      return;
+    }
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const fieldId = button.dataset.hlsSource;
+        const source = readFieldValue(fieldId);
+        if (!source) {
+          setNotice("Stream URL is empty.", "error");
+          return;
+        }
+        if (!isHlsSourceUrl(source)) {
+          setNotice("Stream URL must end with .m3u8 to preview the HLS player.", "error");
+          return;
+        }
+        const playerUrl = buildHlsPlayerUrl(source);
+        window.open(playerUrl, "_blank", "noopener");
+      });
+    });
+  }
+
   function bindRtspListeners() {
     rtspStreams.forEach((stream) => {
       [stream.hostId, stream.userId, stream.passwordId].forEach((fieldId) => {
@@ -489,6 +524,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   bindRtspListeners();
+  bindHlsPreviewButtons();
   loadSettings();
 
   if (groupForm && groupNameField && groupDescriptionField && groupTable) {

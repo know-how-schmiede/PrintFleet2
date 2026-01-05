@@ -1,5 +1,9 @@
 # PrintFleet2 Versions
 
+## 0.6.13 - 2026-1-5
+
+- BugFix Streamanzeige in Edge und Safari
+
 ## 0.6.12 - 2026-1-3
 
 - Settings mit Tab`s

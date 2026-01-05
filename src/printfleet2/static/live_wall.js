@@ -1,4 +1,94 @@
 document.addEventListener("DOMContentLoaded", () => {
+  function isEdgeOrSafari() {
+    const ua = navigator.userAgent;
+    const isEdge = ua.includes("Edg");
+    const isSafari = ua.includes("Safari")
+      && !ua.includes("Chrome")
+      && !ua.includes("Chromium")
+      && !ua.includes("CriOS")
+      && !ua.includes("FxiOS")
+      && !isEdge;
+    return isEdge || isSafari;
+  }
+
+  function isMjpegUrl(value) {
+    if (!value) {
+      return false;
+    }
+    const lower = value.toLowerCase();
+    return lower.includes("/live-wall/stream/") || lower.endsWith(".mjpg") || lower.includes("mjpeg");
+  }
+
+  function applyMjpegReloadFallback() {
+    if (!isEdgeOrSafari()) {
+      return;
+    }
+    const images = Array.from(document.querySelectorAll(".live-wall-frame img"));
+    images.forEach((img) => {
+      const baseSrc = img.getAttribute("src");
+      if (!isMjpegUrl(baseSrc)) {
+        return;
+      }
+      let loaded = false;
+      let attempts = 0;
+      let retryTimer = null;
+      let keepAliveStarted = false;
+
+      const bumpSrc = () => {
+        attempts += 1;
+        const separator = baseSrc.includes("?") ? "&" : "?";
+        img.src = `${baseSrc}${separator}t=${Date.now()}-${attempts}`;
+      };
+
+      const scheduleRetry = () => {
+        if (retryTimer) {
+          return;
+        }
+        const delay = Math.min(8000 + attempts * 2000, 20000);
+        retryTimer = setTimeout(() => {
+          retryTimer = null;
+          if (!loaded) {
+            bumpSrc();
+            scheduleRetry();
+          }
+        }, delay);
+      };
+
+      const forceReload = () => {
+        loaded = false;
+        bumpSrc();
+        scheduleRetry();
+      };
+
+      img.addEventListener("load", () => {
+        loaded = true;
+        attempts = 0;
+        if (retryTimer) {
+          clearTimeout(retryTimer);
+          retryTimer = null;
+        }
+        if (!keepAliveStarted) {
+          keepAliveStarted = true;
+          setInterval(() => {
+            forceReload();
+          }, 120000);
+        }
+      });
+
+      img.addEventListener("error", () => {
+        forceReload();
+      });
+
+      setTimeout(() => {
+        if (!loaded) {
+          forceReload();
+        }
+      }, 6000);
+    });
+  }
+
+  applyMjpegReloadFallback();
+
   const printerCards = Array.from(document.querySelectorAll(".live-wall-printer[data-printer-id]"));
   if (!printerCards.length) {
     return;
