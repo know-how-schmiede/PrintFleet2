@@ -72,6 +72,7 @@
           <div class="card stack">
             <h3>Live-Wall</h3>
             <p class="muted">Configure stream sources and camera credentials.</p>
+            <p class="muted hint">MJPEG streams are optimized for Chrome; Edge/Safari playback may be unreliable.</p>
 
             <details class="stream-section">
               <summary>Stream 1</summary>
@@ -83,15 +84,6 @@
                 <label class="stream-title">
                   Stream title
                   <input type="text" id="settingKioskStreamTitle1" placeholder="Stream 1">
-                </label>
-                <label class="stream-hls">
-                  HLS player
-                  <div class="stream-hls-actions">
-                    <button class="btn small outline" type="button" data-hls-preview data-hls-source="settingKioskStreamUrl1">
-                      Open HLS player
-                    </button>
-                  </div>
-                  <span class="muted hint">Uses the Stream URL if it ends with .m3u8.</span>
                 </label>
                 <label class="stream-generated">
                   Generated RTSP URL 1
@@ -128,15 +120,6 @@
                   Stream title
                   <input type="text" id="settingKioskStreamTitle2" placeholder="Stream 2">
                 </label>
-                <label class="stream-hls">
-                  HLS player
-                  <div class="stream-hls-actions">
-                    <button class="btn small outline" type="button" data-hls-preview data-hls-source="settingKioskStreamUrl2">
-                      Open HLS player
-                    </button>
-                  </div>
-                  <span class="muted hint">Uses the Stream URL if it ends with .m3u8.</span>
-                </label>
                 <label class="stream-generated">
                   Generated RTSP URL 2
                   <input type="text" id="settingKioskGeneratedRtsp2" readonly placeholder="rtsp://user:pass@host:554/stream1">
@@ -172,15 +155,6 @@
                   Stream title
                   <input type="text" id="settingKioskStreamTitle3" placeholder="Stream 3">
                 </label>
-                <label class="stream-hls">
-                  HLS player
-                  <div class="stream-hls-actions">
-                    <button class="btn small outline" type="button" data-hls-preview data-hls-source="settingKioskStreamUrl3">
-                      Open HLS player
-                    </button>
-                  </div>
-                  <span class="muted hint">Uses the Stream URL if it ends with .m3u8.</span>
-                </label>
                 <label class="stream-generated">
                   Generated RTSP URL 3
                   <input type="text" id="settingKioskGeneratedRtsp3" readonly placeholder="rtsp://user:pass@host:554/stream1">
@@ -215,15 +189,6 @@
                 <label class="stream-title">
                   Stream title
                   <input type="text" id="settingKioskStreamTitle4" placeholder="Stream 4">
-                </label>
-                <label class="stream-hls">
-                  HLS player
-                  <div class="stream-hls-actions">
-                    <button class="btn small outline" type="button" data-hls-preview data-hls-source="settingKioskStreamUrl4">
-                      Open HLS player
-                    </button>
-                  </div>
-                  <span class="muted hint">Uses the Stream URL if it ends with .m3u8.</span>
                 </label>
                 <label class="stream-generated">
                   Generated RTSP URL 4

@@ -300,10 +300,6 @@ body {
   grid-column: span 2;
 }
 
-.stream-section .form-grid .stream-hls {
-  grid-column: span 2;
-}
-
 .stream-section .form-grid .stream-active {
   grid-column: 1 / -1;
 }
@@ -319,11 +315,6 @@ body {
   color: var(--muted);
 }
 
-.stream-hls-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
 
 .hint {
   font-size: 0.8rem;
