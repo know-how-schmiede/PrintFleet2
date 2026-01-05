@@ -13,8 +13,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const netScanTable = document.getElementById("netScanTable");
   const netScanTimestamp = document.getElementById("netScanTimestamp");
   const groupSelect = document.getElementById("printerGroupId");
+  const typeSelect = document.getElementById("printerType");
   const sortButtons = Array.from(document.querySelectorAll("[data-sort]"));
   const netSortButtons = Array.from(document.querySelectorAll("[data-net-sort]"));
+  const tabButtons = Array.from(document.querySelectorAll("[data-printer-tab]"));
+  const tabPanels = Array.from(document.querySelectorAll("[data-printer-panel]"));
   const netScanFilters = [
     { id: "netScanFilterElegoo", type: "elegoo-centurio-carbon" },
     { id: "netScanFilterMoonraker", type: "moonraker" },
@@ -24,6 +27,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!form || !notice || !submitBtn || !resetBtn || !refreshBtn) {
     return;
+  }
+
+  function activateTab(targetId) {
+    tabButtons.forEach((button) => {
+      const isActive = button.dataset.printerTab === targetId;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-selected", isActive ? "true" : "false");
+      button.tabIndex = isActive ? 0 : -1;
+    });
+    tabPanels.forEach((panel) => {
+      const isActive = panel.id === targetId;
+      panel.classList.toggle("is-active", isActive);
+      panel.hidden = !isActive;
+    });
+  }
+
+  if (tabButtons.length && tabPanels.length) {
+    tabButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        activateTab(button.dataset.printerTab);
+      });
+    });
+    const initialTab =
+      tabButtons.find((button) => button.classList.contains("is-active"))?.dataset.printerTab ||
+      tabButtons[0].dataset.printerTab;
+    activateTab(initialTab);
   }
 
   function setNotice(message, type) {
@@ -201,7 +230,7 @@ document.addEventListener("DOMContentLoaded", () => {
       netScanTimestamp.textContent = "No scan run yet.";
       return;
     }
-    netScanTimestamp.textContent = `Letzter Scan: ${formatDateTime(date)}`;
+    netScanTimestamp.textContent = `Last scan: ${formatDateTime(date)}`;
   }
 
   let lastNetScan = { items: [], scannedAt: null };
@@ -212,6 +241,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let plugEnergyCache = new Map();
   let plugEnergyLoaded = false;
   let printerGroupsCache = [];
+  let printerTypesCache = [];
   let tasmotaTooltip = null;
   let tasmotaTooltipAnchor = null;
   let tasmotaTooltipPointer = { x: 0, y: 0 };
@@ -418,6 +448,54 @@ document.addEventListener("DOMContentLoaded", () => {
     groupSelect.value = normalized;
   }
 
+  function renderTypeOptions(selectedValue) {
+    if (!typeSelect) {
+      return;
+    }
+    const currentValue = selectedValue !== undefined ? selectedValue : typeSelect.value;
+    typeSelect.innerHTML = "";
+    const emptyOption = document.createElement("option");
+    emptyOption.value = "";
+    emptyOption.textContent = "No type";
+    typeSelect.appendChild(emptyOption);
+    printerTypesCache.forEach((printerType) => {
+      const option = document.createElement("option");
+      option.value = printerType.name;
+      if (printerType.active === false) {
+        option.disabled = true;
+        option.textContent = `${printerType.name} (inactive)`;
+      } else {
+        option.textContent = printerType.name;
+      }
+      typeSelect.appendChild(option);
+    });
+    const normalized = currentValue !== null && currentValue !== undefined ? String(currentValue) : "";
+    if (normalized && !typeSelect.querySelector(`option[value="${normalized}"]`)) {
+      const option = document.createElement("option");
+      option.value = normalized;
+      option.textContent = `Unknown (${normalized})`;
+      typeSelect.appendChild(option);
+    }
+    typeSelect.value = normalized;
+  }
+
+  async function loadPrinterTypes(selectedValue) {
+    if (!typeSelect) {
+      return;
+    }
+    try {
+      const res = await fetch("/api/printer-types");
+      if (!res.ok) {
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      printerTypesCache = Array.isArray(data.items) ? data.items : [];
+      renderTypeOptions(selectedValue);
+    } catch (error) {
+      // ignore type load failures
+    }
+  }
+
   async function loadPrinterGroups() {
     if (!groupSelect) {
       return;
@@ -450,8 +528,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const portPart = defaultPort ? "" : `:${port}`;
       const webUrl = hostPart ? `${scheme}://${hostPart}${portPart}` : "";
       const row = document.createElement("tr");
+      const typeLabel = printer.printer_type || "-";
       row.innerHTML = `
-        <td>${printer.name}</td>
+        <td><strong>${printer.name}</strong><br><span class="muted">${typeLabel}</span></td>
         <td>${printer.backend}</td>
         <td>${printer.host}</td>
         <td>${printer.enabled ? "Yes" : "No"}</td>
@@ -640,7 +719,11 @@ document.addEventListener("DOMContentLoaded", () => {
         ? printer.error_report_interval
         : 30;
     document.getElementById("printerLocation").value = printer.location || "";
-    document.getElementById("printerType").value = printer.printer_type || "";
+    if (printerTypesCache.length) {
+      renderTypeOptions(printer.printer_type || "");
+    } else {
+      loadPrinterTypes(printer.printer_type || "");
+    }
     document.getElementById("printerNotes").value = printer.notes || "";
     document.getElementById("printerToken").value = printer.token || "";
     document.getElementById("printerApiKey").value = printer.api_key || "";
@@ -665,7 +748,11 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("printerPort").value = 80;
     document.getElementById("printerErrorInterval").value = 30;
     document.getElementById("printerLocation").value = "";
-    document.getElementById("printerType").value = "";
+    if (printerTypesCache.length) {
+      renderTypeOptions("");
+    } else {
+      loadPrinterTypes("");
+    }
     document.getElementById("printerNotes").value = "";
     document.getElementById("printerToken").value = "";
     document.getElementById("printerApiKey").value = "";
@@ -684,7 +771,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function loadPrinters() {
-    await loadPrinterGroups();
+    await Promise.all([loadPrinterGroups(), loadPrinterTypes()]);
     const res = await fetch("/api/printers");
     const data = res.ok ? await res.json() : { items: [] };
     if (!res.ok) {
@@ -896,7 +983,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const res = await fetch("/api/net-scan", { method: "POST" });
         if (!res.ok) {
-          setNetScanNotice("Net scan failed.", "error");
+          setNetScanNotice("Network scan failed.", "error");
           netScanTable.innerHTML = "<tr><td colspan=\"5\" class=\"muted\">Scan failed.</td></tr>";
           return;
         }
@@ -912,7 +999,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         applyNetScanFilters();
       } catch (error) {
-        setNetScanNotice("Net scan failed.", "error");
+        setNetScanNotice("Network scan failed.", "error");
         netScanTable.innerHTML = "<tr><td colspan=\"5\" class=\"muted\">Scan failed.</td></tr>";
       } finally {
         netScanBtn.disabled = false;
@@ -934,7 +1021,7 @@ document.addEventListener("DOMContentLoaded", () => {
         filters: Array.from(selected),
         items,
       });
-      setNetScanNotice("Net scan export started.", "success");
+      setNetScanNotice("Network scan export started.", "success");
     });
   }
 

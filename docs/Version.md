@@ -1,5 +1,13 @@
 # PrintFleet2 Versions
 
+## 0.6.14 - 2026-1-5
+
+- Printers Englische Bezeichner
+- Printer form Tabs
+- Settings Printer Type Verwaltung
+- Printer form - Printer type als Auswahlfeld
+- Printer type in Liste Configured printers
+
 ## 0.6.13 - 2026-1-5
 
 - BugFix Streamanzeige in Edge und Safari

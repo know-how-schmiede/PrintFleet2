@@ -24,6 +24,14 @@ from printfleet2.services.printer_group_service import (
     normalize_group_name,
     printer_group_to_dict,
 )
+from printfleet2.services.printer_type_service import (
+    create_printer_type,
+    get_printer_type,
+    get_printer_type_by_name,
+    list_printer_types,
+    normalize_type_name,
+    printer_type_to_dict,
+)
 from printfleet2.services.printer_status_service import (
     build_printer_snapshots,
     collect_plug_energy,
@@ -35,6 +43,7 @@ from printfleet2.services.settings_service import (
     normalize_printer_data,
     normalize_printer_columns,
     normalize_plug_poll_interval,
+    normalize_stream_active,
     settings_to_dict,
     update_settings,
 )
@@ -555,6 +564,90 @@ def delete_printer_group(group_id: int):
         return {"status": "deleted", "cleared_printers": cleared or 0}
 
 
+@bp.get("/api/printer-types")
+def get_printer_types():
+    with session_scope() as session:
+        types = list_printer_types(session)
+        return {"items": [printer_type_to_dict(item) for item in types]}
+
+
+@bp.post("/api/printer-types")
+def post_printer_type():
+    payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return {"error": "invalid_json"}, 400
+    name = normalize_type_name(payload.get("name"))
+    if not name:
+        return {"error": "missing_name"}, 400
+    bed_size = clean_optional(payload.get("bed_size"))
+    manufacturer = clean_optional(payload.get("manufacturer"))
+    type_kind = clean_optional(payload.get("type_kind"))
+    notes = clean_optional(payload.get("notes"))
+    active = normalize_stream_active(payload.get("active"), default=True)
+    upload_gcode_active = normalize_stream_active(payload.get("upload_gcode_active"), default=False)
+    with session_scope() as session:
+        existing = get_printer_type_by_name(session, name)
+        if existing is not None:
+            return {"error": "name_exists"}, 409
+        printer_type = create_printer_type(
+            session,
+            name,
+            bed_size,
+            manufacturer,
+            active,
+            upload_gcode_active,
+            type_kind,
+            notes,
+        )
+        return printer_type_to_dict(printer_type), 201
+
+
+@bp.put("/api/printer-types/<int:type_id>")
+@bp.patch("/api/printer-types/<int:type_id>")
+def put_printer_type(type_id: int):
+    payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return {"error": "invalid_json"}, 400
+    with session_scope() as session:
+        printer_type = get_printer_type(session, type_id)
+        if printer_type is None:
+            return {"error": "not_found"}, 404
+        if "name" in payload:
+            name_value = normalize_type_name(payload.get("name"))
+            if not name_value:
+                return {"error": "missing_name"}, 400
+            existing = get_printer_type_by_name(session, name_value)
+            if existing is not None and existing.id != printer_type.id:
+                return {"error": "name_exists"}, 409
+            printer_type.name = name_value
+        if "bed_size" in payload:
+            printer_type.bed_size = clean_optional(payload.get("bed_size"))
+        if "manufacturer" in payload:
+            printer_type.manufacturer = clean_optional(payload.get("manufacturer"))
+        if "active" in payload:
+            printer_type.active = normalize_stream_active(payload.get("active"), default=True)
+        if "upload_gcode_active" in payload:
+            printer_type.upload_gcode_active = normalize_stream_active(
+                payload.get("upload_gcode_active"),
+                default=False,
+            )
+        if "type_kind" in payload:
+            printer_type.type_kind = clean_optional(payload.get("type_kind"))
+        if "notes" in payload:
+            printer_type.notes = clean_optional(payload.get("notes"))
+        return printer_type_to_dict(printer_type)
+
+
+@bp.delete("/api/printer-types/<int:type_id>")
+def delete_printer_type(type_id: int):
+    with session_scope() as session:
+        printer_type = get_printer_type(session, type_id)
+        if printer_type is None:
+            return {"error": "not_found"}, 404
+        session.delete(printer_type)
+        return {"status": "deleted"}
+
+
 @bp.get("/api/live-wall/status")
 def live_wall_status():
     with session_scope() as session:
@@ -939,6 +1032,11 @@ def api_docs():
             {"method": "PUT", "path": "/api/printer-groups/{id}"},
             {"method": "PATCH", "path": "/api/printer-groups/{id}"},
             {"method": "DELETE", "path": "/api/printer-groups/{id}"},
+            {"method": "GET", "path": "/api/printer-types"},
+            {"method": "POST", "path": "/api/printer-types"},
+            {"method": "PUT", "path": "/api/printer-types/{id}"},
+            {"method": "PATCH", "path": "/api/printer-types/{id}"},
+            {"method": "DELETE", "path": "/api/printer-types/{id}"},
             {"method": "GET", "path": "/api/users"},
             {"method": "GET", "path": "/api/users/export"},
             {"method": "POST", "path": "/api/users/import"},

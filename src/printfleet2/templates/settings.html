@@ -303,6 +303,83 @@
         </table>
       </div>
     </div>
+
+    <div class="card stack">
+      <h3>Printer types</h3>
+      <p class="muted">Maintain reusable printer type metadata.</p>
+      <div id="printerTypeNotice" class="notice"></div>
+      <form id="printerTypeForm" class="form-grid">
+        <input type="hidden" id="printerTypeId">
+        <label>
+          Type name
+          <input type="text" id="printerTypeName" required>
+        </label>
+        <label>
+          Type
+          <select id="printerTypeKind">
+            <option value="">Select type</option>
+            <option value="Kartesisch">Kartesisch</option>
+            <option value="Delta">Delta</option>
+          </select>
+        </label>
+        <label>
+          Hersteller
+          <select id="printerTypeManufacturer">
+            <option value="">Select manufacturer</option>
+            <option value="Anycubic">Anycubic</option>
+            <option value="Artillery">Artillery</option>
+            <option value="Creality">Creality</option>
+            <option value="Elegoo">Elegoo</option>
+            <option value="FLSUN">FLSUN</option>
+            <option value="LulzBot">LulzBot</option>
+            <option value="Prusa Research">Prusa Research</option>
+            <option value="Raise3D">Raise3D</option>
+            <option value="Sovol">Sovol</option>
+          </select>
+        </label>
+        <label>
+          Bed size
+          <input type="text" id="printerTypeBedSize" placeholder="220x220x250">
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="printerTypeActive" checked>
+          Active
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="printerTypeUploadGcode">
+          Upload G-Code active
+        </label>
+        <label class="full">
+          Notes
+          <textarea id="printerTypeNotes" rows="3"></textarea>
+        </label>
+        <div class="form-actions">
+          <button class="btn primary" type="submit" id="printerTypeSubmit">Save type</button>
+          <button class="btn outline" type="button" id="printerTypeReset">Clear</button>
+        </div>
+      </form>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Hersteller</th>
+              <th>Bed size</th>
+              <th>Upload G-Code active</th>
+              <th>Active</th>
+              <th>Notes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="printerTypeTable">
+            <tr>
+              <td colspan="7" class="muted">No types yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </section>
 {% endblock %}
 

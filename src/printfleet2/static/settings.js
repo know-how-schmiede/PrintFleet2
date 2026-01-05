@@ -13,6 +13,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const groupResetBtn = document.getElementById("printerGroupReset");
   const groupSubmitBtn = document.getElementById("printerGroupSubmit");
   const groupTable = document.getElementById("printerGroupTable");
+  const typeForm = document.getElementById("printerTypeForm");
+  const typeNotice = document.getElementById("printerTypeNotice");
+  const typeIdField = document.getElementById("printerTypeId");
+  const typeNameField = document.getElementById("printerTypeName");
+  const typeKindField = document.getElementById("printerTypeKind");
+  const typeManufacturerField = document.getElementById("printerTypeManufacturer");
+  const typeBedSizeField = document.getElementById("printerTypeBedSize");
+  const typeActiveField = document.getElementById("printerTypeActive");
+  const typeUploadGcodeField = document.getElementById("printerTypeUploadGcode");
+  const typeNotesField = document.getElementById("printerTypeNotes");
+  const typeResetBtn = document.getElementById("printerTypeReset");
+  const typeSubmitBtn = document.getElementById("printerTypeSubmit");
+  const typeTable = document.getElementById("printerTypeTable");
 
   if (!form || !notice || !resetBtn) {
     return;
@@ -143,6 +156,17 @@ document.addEventListener("DOMContentLoaded", () => {
     groupNotice.className = "notice " + (type || "");
     if (!message) {
       groupNotice.className = "notice";
+    }
+  }
+
+  function setTypeNotice(message, type) {
+    if (!typeNotice) {
+      return;
+    }
+    typeNotice.textContent = message;
+    typeNotice.className = "notice " + (type || "");
+    if (!message) {
+      typeNotice.className = "notice";
     }
   }
 
@@ -623,5 +647,178 @@ document.addEventListener("DOMContentLoaded", () => {
 
     clearGroupForm({ keepNotice: true });
     loadPrinterGroups();
+  }
+
+  if (typeForm && typeNameField && typeTable) {
+    function normalizeTypeName(value) {
+      if (typeof value !== "string") {
+        return "";
+      }
+      return value.trim();
+    }
+
+    function fillTypeForm(printerType) {
+      if (!printerType) {
+        return;
+      }
+      if (typeIdField) {
+        typeIdField.value = printerType.id || "";
+      }
+      typeNameField.value = printerType.name || "";
+      if (typeKindField) {
+        typeKindField.value = printerType.type_kind || "";
+      }
+      if (typeManufacturerField) {
+        typeManufacturerField.value = printerType.manufacturer || "";
+      }
+      if (typeBedSizeField) {
+        typeBedSizeField.value = printerType.bed_size || "";
+      }
+      if (typeNotesField) {
+        typeNotesField.value = printerType.notes || "";
+      }
+      if (typeActiveField) {
+        typeActiveField.checked = printerType.active !== false;
+      }
+      if (typeUploadGcodeField) {
+        typeUploadGcodeField.checked = printerType.upload_gcode_active === true;
+      }
+      if (typeSubmitBtn) {
+        typeSubmitBtn.textContent = "Save type";
+      }
+    }
+
+    function clearTypeForm(options) {
+      const keepNotice = options && options.keepNotice;
+      if (typeIdField) {
+        typeIdField.value = "";
+      }
+      typeNameField.value = "";
+      if (typeKindField) {
+        typeKindField.value = "";
+      }
+      if (typeManufacturerField) {
+        typeManufacturerField.value = "";
+      }
+      if (typeBedSizeField) {
+        typeBedSizeField.value = "";
+      }
+      if (typeNotesField) {
+        typeNotesField.value = "";
+      }
+      if (typeActiveField) {
+        typeActiveField.checked = true;
+      }
+      if (typeUploadGcodeField) {
+        typeUploadGcodeField.checked = false;
+      }
+      if (typeSubmitBtn) {
+        typeSubmitBtn.textContent = "Create type";
+      }
+      if (!keepNotice) {
+        setTypeNotice("", "");
+      }
+    }
+
+    function renderTypeTable(items) {
+      typeTable.innerHTML = "";
+      if (!items.length) {
+        typeTable.innerHTML = "<tr><td colspan=\"7\" class=\"muted\">No types yet.</td></tr>";
+        return;
+      }
+      items.forEach((printerType) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${printerType.name}</td>
+          <td>${printerType.type_kind || "-"}</td>
+          <td>${printerType.manufacturer || "-"}</td>
+          <td>${printerType.bed_size || "-"}</td>
+          <td>${printerType.upload_gcode_active ? "Yes" : "No"}</td>
+          <td>${printerType.active ? "Yes" : "No"}</td>
+          <td>${printerType.notes || "-"}</td>
+          <td>
+            <button class="btn small" data-action="edit" type="button">Edit</button>
+            <button class="btn small danger" data-action="delete" type="button">Delete</button>
+          </td>
+        `;
+        const editBtn = row.querySelector('[data-action="edit"]');
+        const deleteBtn = row.querySelector('[data-action="delete"]');
+        if (editBtn) {
+          editBtn.addEventListener("click", () => fillTypeForm(printerType));
+        }
+        if (deleteBtn) {
+          deleteBtn.addEventListener("click", async () => {
+            if (!confirm(`Delete type ${printerType.name}?`)) {
+              return;
+            }
+            const res = await fetch(`/api/printer-types/${printerType.id}`, { method: "DELETE" });
+            if (!res.ok) {
+              setTypeNotice("Failed to delete type.", "error");
+              return;
+            }
+            if (typeIdField && typeIdField.value && Number(typeIdField.value) === printerType.id) {
+              clearTypeForm({ keepNotice: true });
+            }
+            setTypeNotice("Type deleted.", "success");
+            loadPrinterTypes();
+          });
+        }
+        typeTable.appendChild(row);
+      });
+    }
+
+    async function loadPrinterTypes() {
+      setTypeNotice("", "");
+      const res = await fetch("/api/printer-types");
+      if (!res.ok) {
+        setTypeNotice("Failed to load types.", "error");
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      const items = Array.isArray(data.items) ? data.items : [];
+      renderTypeTable(items);
+    }
+
+    typeForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const name = normalizeTypeName(typeNameField.value);
+      if (!name) {
+        setTypeNotice("Type name is required.", "error");
+        return;
+      }
+      const payload = {
+        name,
+        type_kind: typeKindField ? typeKindField.value || null : null,
+        manufacturer: typeManufacturerField ? typeManufacturerField.value.trim() || null : null,
+        bed_size: typeBedSizeField ? typeBedSizeField.value.trim() || null : null,
+        active: typeActiveField ? typeActiveField.checked : true,
+        upload_gcode_active: typeUploadGcodeField ? typeUploadGcodeField.checked : false,
+        notes: typeNotesField ? typeNotesField.value.trim() || null : null,
+      };
+      const typeId = typeIdField && typeIdField.value ? Number(typeIdField.value) : null;
+      const method = typeId ? "PATCH" : "POST";
+      const url = typeId ? `/api/printer-types/${typeId}` : "/api/printer-types";
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const message = data.error === "name_exists" ? "Type name already exists." : "Failed to save type.";
+        setTypeNotice(message, "error");
+        return;
+      }
+      clearTypeForm({ keepNotice: true });
+      setTypeNotice(typeId ? "Type updated." : "Type created.", "success");
+      loadPrinterTypes();
+    });
+
+    if (typeResetBtn) {
+      typeResetBtn.addEventListener("click", () => clearTypeForm());
+    }
+
+    clearTypeForm({ keepNotice: true });
+    loadPrinterTypes();
   }
 });

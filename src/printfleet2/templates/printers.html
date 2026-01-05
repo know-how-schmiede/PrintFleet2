@@ -12,82 +12,128 @@
 
     <div class="card">
       <h3>Printer form</h3>
-      <p class="muted">Required: name, backend, host.</p>
+      <p class="muted">Required*: name, backend, host.</p>
       <div id="printerNotice" class="notice"></div>
-      <form id="printerForm" class="form-grid">
+      <form id="printerForm" class="stack">
         <input type="hidden" id="printerId">
 
-        <label>
-          Name
-          <input type="text" id="printerName" required>
-        </label>
-        <label>
-          Backend
-          <select id="printerBackend" required>
-            <option value="">Select backend</option>
-            <option value="moonraker">Moonraker</option>
-            <option value="octoprint">OctoPrint</option>
-            <option value="centauri">Centauri</option>
-          </select>
-        </label>
-        <label>
-          Host
-          <input type="text" id="printerHost" placeholder="192.168.1.10" required>
-        </label>
-        <label>
-          Port
-          <input type="number" id="printerPort" value="80" min="1" max="65535">
-        </label>
-        <label>
-          Fehlerintervall (Sekunden)
-          <input type="number" id="printerErrorInterval" value="30" min="0" step="0.1">
-        </label>
-        <label>
-          Standort
-          <input type="text" id="printerLocation">
-        </label>
-        <label>
-          Druckertyp
-          <input type="text" id="printerType">
-        </label>
-        <label>
-          Group
-          <select id="printerGroupId">
-            <option value="">No group</option>
-          </select>
-        </label>
-        <label>
-          Token (Moonraker)
-          <input type="text" id="printerToken">
-        </label>
-        <label>
-          API-Schlüssel (OctoPrint)
-          <input type="text" id="printerApiKey">
-        </label>
-        <label>
-          Tasmota Host
-          <input type="text" id="printerTasmotaHost">
-        </label>
-        <label>
-          Tasmota Topic
-          <input type="text" id="printerTasmotaTopic">
-        </label>
-        <label class="full">
-          Notizen
-          <textarea id="printerNotes" rows="4"></textarea>
-        </label>
-        <label class="checkbox">
-          <input type="checkbox" id="printerHttps">
-          HTTPS
-        </label>
-        <label class="checkbox">
-          <input type="checkbox" id="printerEnabled" checked>
-          Enabled
-        </label>
-        <label class="checkbox">
-          <input type="checkbox" id="printerScanning" checked>
-          Scanning
-        </label>
+        <div class="tabs">
+          <div class="tab-list" role="tablist" aria-label="Printer form sections">
+            <button class="tab-button is-active" type="button" role="tab" id="printer-tab-basics-btn" aria-controls="printer-tab-basics" aria-selected="true" data-printer-tab="printer-tab-basics">
+              Basics
+            </button>
+            <button class="tab-button" type="button" role="tab" id="printer-tab-auth-btn" aria-controls="printer-tab-auth" aria-selected="false" data-printer-tab="printer-tab-auth">
+              Auth
+            </button>
+            <button class="tab-button" type="button" role="tab" id="printer-tab-tasmota-btn" aria-controls="printer-tab-tasmota" aria-selected="false" data-printer-tab="printer-tab-tasmota">
+              Tasmota
+            </button>
+            <button class="tab-button" type="button" role="tab" id="printer-tab-monitoring-btn" aria-controls="printer-tab-monitoring" aria-selected="false" data-printer-tab="printer-tab-monitoring">
+              Monitoring
+            </button>
+            <button class="tab-button" type="button" role="tab" id="printer-tab-notes-btn" aria-controls="printer-tab-notes" aria-selected="false" data-printer-tab="printer-tab-notes">
+              Notes
+            </button>
+          </div>
+
+          <div class="tab-panel is-active" id="printer-tab-basics" role="tabpanel" aria-labelledby="printer-tab-basics-btn" data-printer-panel>
+            <div class="form-grid">
+              <label>
+                Name*
+                <input type="text" id="printerName" required>
+              </label>
+              <label>
+                Printer type
+                <select id="printerType">
+                  <option value="">No type</option>
+                </select>
+              </label>
+              <label>
+                Backend*
+                <select id="printerBackend" required>
+                  <option value="">Select backend</option>
+                  <option value="moonraker">Moonraker</option>
+                  <option value="octoprint">OctoPrint</option>
+                  <option value="centauri">Centauri</option>
+                </select>
+              </label>
+              <label>
+                Group
+                <select id="printerGroupId">
+                  <option value="">No group</option>
+                </select>
+              </label>
+              <label>
+                Host*
+                <input type="text" id="printerHost" placeholder="192.168.1.10" required>
+              </label>
+              <label>
+                Port
+                <input type="number" id="printerPort" value="80" min="1" max="65535">
+              </label>
+              <label class="checkbox">
+                <input type="checkbox" id="printerHttps">
+                HTTPS
+              </label>
+              <label class="checkbox">
+                <input type="checkbox" id="printerEnabled" checked>
+                Enabled
+              </label>
+              <label class="checkbox">
+                <input type="checkbox" id="printerScanning" checked>
+                Scanning
+              </label>
+            </div>
+          </div>
+
+          <div class="tab-panel" id="printer-tab-auth" role="tabpanel" aria-labelledby="printer-tab-auth-btn" data-printer-panel hidden>
+            <div class="form-grid">
+              <label>
+                Token (Moonraker)
+                <input type="text" id="printerToken">
+              </label>
+              <label>
+                API key (OctoPrint)
+                <input type="text" id="printerApiKey">
+              </label>
+            </div>
+          </div>
+
+          <div class="tab-panel" id="printer-tab-tasmota" role="tabpanel" aria-labelledby="printer-tab-tasmota-btn" data-printer-panel hidden>
+            <div class="form-grid">
+              <label>
+                Tasmota Host
+                <input type="text" id="printerTasmotaHost">
+              </label>
+              <label>
+                Tasmota Topic
+                <input type="text" id="printerTasmotaTopic">
+              </label>
+            </div>
+          </div>
+
+          <div class="tab-panel" id="printer-tab-monitoring" role="tabpanel" aria-labelledby="printer-tab-monitoring-btn" data-printer-panel hidden>
+            <div class="form-grid">
+              <label>
+                Location
+                <input type="text" id="printerLocation">
+              </label>
+              <label>
+                Error interval (seconds)
+                <input type="number" id="printerErrorInterval" value="30" min="0" step="0.1">
+              </label>
+            </div>
+          </div>
+
+          <div class="tab-panel" id="printer-tab-notes" role="tabpanel" aria-labelledby="printer-tab-notes-btn" data-printer-panel hidden>
+            <div class="form-grid">
+              <label class="full">
+                Notes
+                <textarea id="printerNotes" rows="4"></textarea>
+              </label>
+            </div>
+          </div>
+        </div>
 
         <div class="form-actions">
           <button class="btn primary" type="submit" id="printerSubmit">Create printer</button>
@@ -131,13 +177,13 @@
 
     <div class="card">
       <div class="table-header">
-        <h3>Net Scan</h3>
+        <h3>Network Scan</h3>
         <div class="table-actions">
-          <button class="btn soft" id="netScanButton" type="button">Net Scan</button>
+          <button class="btn soft" id="netScanButton" type="button">Network Scan</button>
           <button class="btn soft" id="netScanExport" type="button">Export JSON</button>
         </div>
       </div>
-      <p class="muted">Scans the local network for OctoPrint, Moonraker, Elegoo Centurio Carbon, and Tasmota Steckdosen.</p>
+      <p class="muted">Scans the local network for OctoPrint, Moonraker, Elegoo Centurio Carbon, and Tasmota plugs.</p>
       <div class="net-scan-filters">
         <span class="muted">Filter:</span>
         <label class="checkbox">
@@ -154,7 +200,7 @@
         </label>
         <label class="checkbox">
           <input type="checkbox" id="netScanFilterTasmota" checked>
-          Tasmota Steckdose
+          Tasmota plug
         </label>
       </div>
       <p class="muted" id="netScanTimestamp">No scan run yet.</p>
