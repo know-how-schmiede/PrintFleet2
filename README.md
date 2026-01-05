@@ -18,6 +18,7 @@ Status: MVP in progress (users, printers, settings, Live-Wall).
 - Settings UI with Live-Wall stream configuration (collapsible stream sections)
 - Live-Wall printer layout controls (printers per row 1-5, data density: light/normal/all)
 - Printer management with active list on Live-Wall
+- Printer groups and printer type catalogs in Settings
 - Live-Wall status and plug status JSON feeds for external displays
 - Network scan API endpoint to discover devices on the local subnet
 - User import/export API endpoints for migration and backups
@@ -53,17 +54,27 @@ PrintFleet2/
       models/
         __init__.py
         printer.py
+        printer_group.py
+        printer_type.py
         settings.py
         user.py
       services/
         auth_service.py
+        net_scan_service.py
+        printer_group_service.py
         printer_service.py
+        printer_status_service.py
+        printer_type_service.py
         settings_service.py
         user_service.py
       static/
+        live_wall.js
+        printers.js
+        settings.js
         style.css
       templates/
         base.html
+        docs.html
         live_wall.html
         login.html
         printers.html
