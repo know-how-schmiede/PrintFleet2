@@ -1,4 +1,10 @@
 # PrintFleet2 Versions
+
+## 0.7.2 - 2026-1-6
+
+- BugFix Import JSON Printer
+- Printer groups JSON Ex- und Import
+
 ## 0.7.1 - 2026-1-6
 
 - Präfix Druckertyp in Printer types

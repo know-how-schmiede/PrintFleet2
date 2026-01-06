@@ -13,6 +13,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const groupResetBtn = document.getElementById("printerGroupReset");
   const groupSubmitBtn = document.getElementById("printerGroupSubmit");
   const groupTable = document.getElementById("printerGroupTable");
+  const groupExportBtn = document.getElementById("printerGroupExport");
+  const groupImportBtn = document.getElementById("printerGroupImport");
+  const groupImportFile = document.getElementById("printerGroupImportFile");
   const typeForm = document.getElementById("printerTypeForm");
   const typeNotice = document.getElementById("printerTypeNotice");
   const typeIdField = document.getElementById("printerTypeId");
@@ -333,6 +336,22 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
+  function buildPrinterGroupExportFileName() {
+    const now = new Date();
+    const pad = (value) => String(value).padStart(2, "0");
+    return (
+      "printfleet_printer_groups_" +
+      now.getFullYear() +
+      pad(now.getMonth() + 1) +
+      pad(now.getDate()) +
+      "_" +
+      pad(now.getHours()) +
+      pad(now.getMinutes()) +
+      pad(now.getSeconds()) +
+      ".json"
+    );
+  }
+
   async function loadSettings() {
     setNotice("", "");
     const res = await fetch("/api/settings");
@@ -420,6 +439,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (payload && Array.isArray(payload.types)) {
       return payload.types;
+    }
+    return null;
+  }
+
+  function extractImportPrinterGroups(payload) {
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+    if (payload && Array.isArray(payload.items)) {
+      return payload.items;
+    }
+    if (payload && Array.isArray(payload.printer_groups)) {
+      return payload.printer_groups;
+    }
+    if (payload && Array.isArray(payload.groups)) {
+      return payload.groups;
     }
     return null;
   }
@@ -679,6 +714,91 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (groupResetBtn) {
       groupResetBtn.addEventListener("click", () => clearGroupForm());
+    }
+
+    if (groupExportBtn) {
+      groupExportBtn.addEventListener("click", async () => {
+        groupExportBtn.disabled = true;
+        setGroupNotice("Preparing group export...", "success");
+        try {
+          const res = await fetch("/api/printer-groups/export");
+          if (!res.ok) {
+            throw new Error("export_failed");
+          }
+          const data = await res.json().catch(() => ({}));
+          const items = Array.isArray(data.items) ? data.items : [];
+          downloadJson(buildPrinterGroupExportFileName(), {
+            exported_at: data.exported_at || new Date().toISOString(),
+            app_version: data.app_version || null,
+            items,
+          });
+          setGroupNotice(`Exported ${items.length} group(s).`, "success");
+        } catch (error) {
+          setGroupNotice("Failed to export groups.", "error");
+        } finally {
+          groupExportBtn.disabled = false;
+        }
+      });
+    }
+
+    if (groupImportBtn && groupImportFile) {
+      groupImportBtn.addEventListener("click", () => groupImportFile.click());
+      groupImportFile.addEventListener("change", async () => {
+        const file = groupImportFile.files && groupImportFile.files[0];
+        groupImportFile.value = "";
+        if (!file) {
+          return;
+        }
+        let payload;
+        try {
+          const text = await file.text();
+          payload = JSON.parse(text);
+        } catch (error) {
+          setGroupNotice("Invalid JSON file.", "error");
+          return;
+        }
+        const items = extractImportPrinterGroups(payload);
+        if (!items) {
+          setGroupNotice("JSON must contain printer groups.", "error");
+          return;
+        }
+        if (!items.length) {
+          setGroupNotice("No printer groups found in JSON.", "error");
+          return;
+        }
+        if (!confirm(`Import ${items.length} printer group(s)? Existing names will be updated.`)) {
+          return;
+        }
+        groupImportBtn.disabled = true;
+        setGroupNotice(`Importing ${items.length} printer group(s)...`, "success");
+        try {
+          const res = await fetch("/api/printer-groups/import", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ items }),
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            setGroupNotice(data.error || "Failed to import groups.", "error");
+            groupImportBtn.disabled = false;
+            return;
+          }
+          const data = await res.json().catch(() => ({}));
+          const created = Number(data.created) || 0;
+          const updated = Number(data.updated) || 0;
+          const skipped = Number(data.skipped) || 0;
+          const invalid = Number(data.invalid) || 0;
+          setGroupNotice(
+            `Import complete: ${created} created, ${updated} updated, ${skipped} skipped, ${invalid} invalid.`,
+            "success"
+          );
+          groupImportBtn.disabled = false;
+          loadPrinterGroups();
+        } catch (error) {
+          setGroupNotice("Failed to import groups.", "error");
+          groupImportBtn.disabled = false;
+        }
+      });
     }
 
     clearGroupForm({ keepNotice: true });

@@ -545,6 +545,59 @@ def get_printer_groups():
         return {"items": [printer_group_to_dict(group) for group in groups]}
 
 
+@bp.get("/api/printer-groups/export")
+def export_printer_groups():
+    with session_scope() as session:
+        groups = list_printer_groups(session)
+        return {
+            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "app_version": VERSION,
+            "items": [printer_group_to_dict(group) for group in groups],
+        }
+
+
+@bp.post("/api/printer-groups/import")
+def import_printer_groups():
+    payload = request.get_json(silent=True) or {}
+    if isinstance(payload, list):
+        items = payload
+    elif isinstance(payload, dict):
+        items = payload.get("items") or payload.get("printer_groups") or payload.get("groups")
+    else:
+        items = None
+    if not isinstance(items, list):
+        return {"error": "invalid_json"}, 400
+    created = 0
+    updated = 0
+    skipped = 0
+    invalid = 0
+    seen_names: set[str] = set()
+    with session_scope() as session:
+        for raw in items:
+            if not isinstance(raw, dict):
+                invalid += 1
+                continue
+            name = normalize_group_name(raw.get("name"))
+            if not name:
+                invalid += 1
+                continue
+            name_key = name.lower()
+            if name_key in seen_names:
+                skipped += 1
+                continue
+            seen_names.add(name_key)
+            description = clean_optional(raw.get("description")) if "description" in raw else None
+            existing = get_printer_group_by_name(session, name)
+            if existing is None:
+                create_printer_group(session, name, description)
+                created += 1
+            else:
+                if "description" in raw:
+                    existing.description = description
+                updated += 1
+    return {"created": created, "updated": updated, "skipped": skipped, "invalid": invalid}
+
+
 @bp.post("/api/printer-groups")
 def post_printer_group():
     payload = request.get_json(silent=True) or {}
@@ -1234,6 +1287,8 @@ def api_docs():
             {"method": "PATCH", "path": "/api/printers/{id}"},
             {"method": "DELETE", "path": "/api/printers/{id}"},
             {"method": "GET", "path": "/api/printer-groups"},
+            {"method": "GET", "path": "/api/printer-groups/export"},
+            {"method": "POST", "path": "/api/printer-groups/import"},
             {"method": "POST", "path": "/api/printer-groups"},
             {"method": "PUT", "path": "/api/printer-groups/{id}"},
             {"method": "PATCH", "path": "/api/printer-groups/{id}"},

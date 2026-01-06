@@ -19,12 +19,17 @@ Status: MVP in progress (users, printers, settings, Live-Wall).
 - Live-Wall printer layout controls (printers per row 1-5, data density: light/normal/all)
 - Printer management with active list on Live-Wall
 - Printer groups and printer type catalogs in Settings
+- Printer groups export/import as JSON for migration and backups
+- Printer import/export as JSON for migration and backups
 - Printer types export/import as JSON (includes export timestamp + app version)
+- Printer types support a G-Code prefix value used for safe uploads
 - Settings export/import as JSON for backup/restore
 - Live-Wall status and plug status JSON feeds for external displays
 - Network scan API endpoint to discover devices on the local subnet
 - User import/export API endpoints for migration and backups
 - "Just Printing" view for printers with Upload G-Code active
+- Upload + Print with safety checks (prefix match, pre-upload checklist, busy printer guard)
+- Printer check status badge blocks uploads until confirmed, even after restarts
 - API docs page at `/docs` plus JSON listing at `/api/docs`
 - Versioning file and changelog in docs
 
@@ -67,6 +72,7 @@ PrintFleet2/
         printer_group_service.py
         printer_service.py
         printer_status_service.py
+        printer_upload_service.py
         printer_type_service.py
         settings_service.py
         user_service.py

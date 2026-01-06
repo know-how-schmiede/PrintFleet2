@@ -122,13 +122,41 @@ document.addEventListener("DOMContentLoaded", () => {
     return Number.isFinite(number) ? number : fallback;
   }
 
+  function parseImportHost(rawHost, rawPort, rawHttps) {
+    const trimmed = normalizeText(rawHost);
+    let host = trimmed;
+    let port = Number.isFinite(Number(rawPort)) ? Number(rawPort) : null;
+    let https = !!rawHttps;
+    if (trimmed && /^https?:\/\//i.test(trimmed)) {
+      try {
+        const url = new URL(trimmed);
+        host = url.hostname;
+        if (url.port) {
+          port = numericValue(url.port, port ?? 80);
+        } else if (port === null) {
+          port = url.protocol === "https:" ? 443 : 80;
+        }
+        https = url.protocol === "https:";
+      } catch (error) {
+        host = trimmed.replace(/^https?:\/\//i, "").split("/")[0];
+      }
+    } else if (trimmed && trimmed.includes("/")) {
+      host = trimmed.split("/")[0];
+    }
+    if (port === null) {
+      port = 80;
+    }
+    return { host, port, https };
+  }
+
   function buildImportPayload(raw) {
     if (!raw || typeof raw !== "object") {
       return null;
     }
     const name = normalizeText(raw.name);
     const backend = normalizeText(raw.backend);
-    const host = normalizeText(raw.host);
+    const hostInfo = parseImportHost(raw.host, raw.port, raw.https);
+    const host = normalizeText(hostInfo.host);
     if (!name || !backend || !host) {
       return null;
     }
@@ -136,7 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
       name,
       backend,
       host,
-      port: numericValue(raw.port, 80),
+      port: hostInfo.port,
       error_report_interval: numericValue(raw.error_report_interval, 30),
       location: optionalText(raw.location),
       printer_type: optionalText(raw.printer_type),
@@ -146,7 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
       tasmota_host: optionalText(raw.tasmota_host),
       tasmota_topic: optionalText(raw.tasmota_topic),
       group_id: Number.isFinite(Number(raw.group_id)) ? Number(raw.group_id) : null,
-      https: !!raw.https,
+      https: hostInfo.https,
       enabled: raw.enabled !== undefined ? !!raw.enabled : true,
       scanning:
         raw.scanning !== undefined ? !!raw.scanning : raw.no_scanning !== undefined ? !raw.no_scanning : true,
@@ -971,19 +999,43 @@ document.addEventListener("DOMContentLoaded", () => {
         existingItems.map((printer) => normalizeKey(printer.name)).filter(Boolean)
       );
       const existingHostKeys = new Set(
-        existingItems.map((printer) =>
-          buildHostKey({
-            backend: printer.backend,
-            host: printer.host,
-            port: printer.port,
+        existingItems
+          .map((printer) => {
+            const hostInfo = parseImportHost(printer.host, printer.port, printer.https);
+            return buildHostKey({
+              backend: printer.backend,
+              host: hostInfo.host,
+              port: hostInfo.port,
+            });
           })
-        ).filter(Boolean)
+          .filter(Boolean)
       );
+      let groupIds = null;
+      try {
+        const groupRes = await fetch("/api/printer-groups");
+        if (groupRes.ok) {
+          const groupData = await groupRes.json().catch(() => ({}));
+          const groups = groupData.items || [];
+          groupIds = new Set(
+            groups.map((group) => Number(group.id)).filter((id) => Number.isFinite(id))
+          );
+        }
+      } catch (error) {
+        groupIds = null;
+      }
       for (const raw of items) {
         const data = buildImportPayload(raw);
         if (!data) {
           skippedInvalid += 1;
           continue;
+        }
+        if (
+          groupIds &&
+          data.group_id !== null &&
+          data.group_id !== undefined &&
+          !groupIds.has(Number(data.group_id))
+        ) {
+          data.group_id = null;
         }
         const nameKey = normalizeKey(data.name);
         const hostKey = buildHostKey(data);
@@ -1006,6 +1058,30 @@ document.addEventListener("DOMContentLoaded", () => {
               existingHostKeys.add(hostKey);
             }
           } else {
+            const errorData = await res.json().catch(() => ({}));
+            const errorCode = errorData?.error || errorData?.code;
+            if (
+              data.group_id !== null &&
+              data.group_id !== undefined &&
+              (errorCode === "invalid_group_id" || errorCode === "group_not_found")
+            ) {
+              const retryPayload = { ...data, group_id: null };
+              const retryRes = await fetch("/api/printers", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(retryPayload),
+              });
+              if (retryRes.ok) {
+                created += 1;
+                if (nameKey) {
+                  existingNameKeys.add(nameKey);
+                }
+                if (hostKey) {
+                  existingHostKeys.add(hostKey);
+                }
+                continue;
+              }
+            }
             failed += 1;
           }
         } catch (error) {
