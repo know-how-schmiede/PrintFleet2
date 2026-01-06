@@ -30,6 +30,20 @@ def _resolve_scanning(data: dict, default: bool) -> bool:
     return default
 
 
+def _normalize_check_status(value: object, default: str = "clear") -> str:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return "check" if value else "clear"
+    if isinstance(value, str):
+        cleaned = value.strip().lower().replace(" ", "").replace("_", "")
+        if cleaned in {"check", "checkprinter"}:
+            return "check"
+        if cleaned in {"clear", "ok", "ready"}:
+            return "clear"
+    return default
+
+
 def ensure_printer_schema(session: Session) -> None:
     engine = session.get_bind()
     inspector = inspect(engine)
@@ -49,6 +63,14 @@ def ensure_printer_schema(session: Session) -> None:
                     conn.execute(text("UPDATE printers SET scanning = 1"))
             if "group_id" not in columns:
                 conn.execute(text("ALTER TABLE printers ADD COLUMN group_id INTEGER"))
+            if "print_check_status" not in columns:
+                conn.execute(text("ALTER TABLE printers ADD COLUMN print_check_status VARCHAR"))
+                conn.execute(
+                    text(
+                        "UPDATE printers SET print_check_status = 'clear' "
+                        "WHERE print_check_status IS NULL OR print_check_status = ''"
+                    )
+                )
     except Exception:
         return
 
@@ -82,6 +104,7 @@ def create_printer(session: Session, data: dict) -> Printer:
         notes=data.get("notes"),
         enabled=_bool_value(data.get("enabled"), True),
         group_id=data.get("group_id"),
+        print_check_status=_normalize_check_status(data.get("print_check_status"), "clear"),
     )
     session.add(printer)
     return printer
@@ -120,6 +143,11 @@ def update_printer(session: Session, printer: Printer, data: dict) -> Printer:
         printer.enabled = _bool_value(data.get("enabled"), printer.enabled)
     if "group_id" in data:
         printer.group_id = data.get("group_id")
+    if "print_check_status" in data:
+        printer.print_check_status = _normalize_check_status(
+            data.get("print_check_status"),
+            printer.print_check_status or "clear",
+        )
     return printer
 
 
@@ -146,6 +174,7 @@ def printer_to_dict(printer: Printer) -> dict:
         "notes": printer.notes,
         "enabled": printer.enabled,
         "group_id": printer.group_id,
+        "print_check_status": printer.print_check_status or "clear",
     }
 
 

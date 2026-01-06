@@ -12,6 +12,7 @@ class PrinterType(Base):
     bed_size: Mapped[str | None] = mapped_column(String, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     manufacturer: Mapped[str | None] = mapped_column(String, nullable=True)
+    gcode_prefix: Mapped[str | None] = mapped_column(String, nullable=True)
     upload_gcode_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     type_kind: Mapped[str | None] = mapped_column(String, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

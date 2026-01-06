@@ -745,6 +745,45 @@ label.checkbox input {
   letter-spacing: 0.02em;
 }
 
+.printer-check-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ef4444;
+  background: #ef4444;
+  color: #ffffff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0;
+  box-shadow: 0 8px 16px rgba(239, 68, 68, 0.25);
+  cursor: pointer;
+}
+
+.printer-check-status:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+}
+
+.printer-status-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #10b981;
+  background: #10b981;
+  color: #ffffff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0;
+  box-shadow: 0 8px 16px rgba(16, 185, 129, 0.25);
+}
+
 .plug-icon {
   display: inline-block;
   margin-right: 6px;

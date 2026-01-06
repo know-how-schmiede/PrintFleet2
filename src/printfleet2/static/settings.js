@@ -19,6 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const typeNameField = document.getElementById("printerTypeName");
   const typeKindField = document.getElementById("printerTypeKind");
   const typeManufacturerField = document.getElementById("printerTypeManufacturer");
+  const typeGcodePrefixField = document.getElementById("printerTypeGcodePrefix");
   const typeBedSizeField = document.getElementById("printerTypeBedSize");
   const typeActiveField = document.getElementById("printerTypeActive");
   const typeUploadGcodeField = document.getElementById("printerTypeUploadGcode");
@@ -706,6 +707,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (typeManufacturerField) {
         typeManufacturerField.value = printerType.manufacturer || "";
       }
+      if (typeGcodePrefixField) {
+        typeGcodePrefixField.value = printerType.gcode_prefix || "";
+      }
       if (typeBedSizeField) {
         typeBedSizeField.value = printerType.bed_size || "";
       }
@@ -735,6 +739,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (typeManufacturerField) {
         typeManufacturerField.value = "";
       }
+      if (typeGcodePrefixField) {
+        typeGcodePrefixField.value = "";
+      }
       if (typeBedSizeField) {
         typeBedSizeField.value = "";
       }
@@ -758,7 +765,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderTypeTable(items) {
       typeTable.innerHTML = "";
       if (!items.length) {
-        typeTable.innerHTML = "<tr><td colspan=\"7\" class=\"muted\">No types yet.</td></tr>";
+        typeTable.innerHTML = "<tr><td colspan=\"9\" class=\"muted\">No types yet.</td></tr>";
         return;
       }
       items.forEach((printerType) => {
@@ -767,6 +774,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <td>${printerType.name}</td>
           <td>${printerType.type_kind || "-"}</td>
           <td>${printerType.manufacturer || "-"}</td>
+          <td>${printerType.gcode_prefix || "-"}</td>
           <td>${printerType.bed_size || "-"}</td>
           <td>${printerType.upload_gcode_active ? "Yes" : "No"}</td>
           <td>${printerType.active ? "Yes" : "No"}</td>
@@ -825,6 +833,7 @@ document.addEventListener("DOMContentLoaded", () => {
         name,
         type_kind: typeKindField ? typeKindField.value || null : null,
         manufacturer: typeManufacturerField ? typeManufacturerField.value.trim() || null : null,
+        gcode_prefix: typeGcodePrefixField ? typeGcodePrefixField.value.trim() || null : null,
         bed_size: typeBedSizeField ? typeBedSizeField.value.trim() || null : null,
         active: typeActiveField ? typeActiveField.checked : true,
         upload_gcode_active: typeUploadGcodeField ? typeUploadGcodeField.checked : false,

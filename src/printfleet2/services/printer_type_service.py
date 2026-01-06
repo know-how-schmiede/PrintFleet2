@@ -20,6 +20,8 @@ def ensure_printer_type_schema(session: Session) -> None:
         missing = {}
         if "manufacturer" not in columns:
             missing["manufacturer"] = "TEXT"
+        if "gcode_prefix" not in columns:
+            missing["gcode_prefix"] = "TEXT"
         if "upload_gcode_active" not in columns:
             missing["upload_gcode_active"] = "INTEGER NOT NULL DEFAULT 0"
         if "type_kind" not in columns:
@@ -42,6 +44,7 @@ def ensure_printer_type_schema(session: Session) -> None:
                     "bed_size VARCHAR, "
                     "active INTEGER NOT NULL DEFAULT 1, "
                     "manufacturer VARCHAR, "
+                    "gcode_prefix VARCHAR, "
                     "upload_gcode_active INTEGER NOT NULL DEFAULT 0, "
                     "type_kind VARCHAR, "
                     "notes TEXT)"
@@ -82,6 +85,7 @@ def create_printer_type(
     name: str,
     bed_size: str | None = None,
     manufacturer: str | None = None,
+    gcode_prefix: str | None = None,
     active: bool | None = None,
     upload_gcode_active: bool | None = None,
     type_kind: str | None = None,
@@ -94,6 +98,7 @@ def create_printer_type(
         name=name,
         bed_size=bed_size,
         manufacturer=manufacturer,
+        gcode_prefix=gcode_prefix,
         active=active_value,
         upload_gcode_active=upload_value,
         type_kind=type_kind,
@@ -110,6 +115,7 @@ def printer_type_to_dict(printer_type: PrinterType) -> dict:
         "bed_size": printer_type.bed_size,
         "active": bool(printer_type.active),
         "manufacturer": printer_type.manufacturer,
+        "gcode_prefix": printer_type.gcode_prefix,
         "upload_gcode_active": bool(printer_type.upload_gcode_active),
         "type_kind": printer_type.type_kind,
         "notes": printer_type.notes,

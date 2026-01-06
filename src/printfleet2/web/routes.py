@@ -651,6 +651,7 @@ def import_printer_types():
             seen_names.add(name_key)
             bed_size = clean_optional(raw.get("bed_size")) if "bed_size" in raw else None
             manufacturer = clean_optional(raw.get("manufacturer")) if "manufacturer" in raw else None
+            gcode_prefix = clean_optional(raw.get("gcode_prefix")) if "gcode_prefix" in raw else None
             type_kind = clean_optional(raw.get("type_kind")) if "type_kind" in raw else None
             notes = clean_optional(raw.get("notes")) if "notes" in raw else None
             active_present = "active" in raw
@@ -664,6 +665,7 @@ def import_printer_types():
                     name,
                     bed_size,
                     manufacturer,
+                    gcode_prefix,
                     active,
                     upload_gcode_active,
                     type_kind,
@@ -675,6 +677,8 @@ def import_printer_types():
                     existing.bed_size = bed_size
                 if "manufacturer" in raw:
                     existing.manufacturer = manufacturer
+                if "gcode_prefix" in raw:
+                    existing.gcode_prefix = gcode_prefix
                 if active_present:
                     existing.active = active
                 if upload_present:
@@ -697,6 +701,7 @@ def post_printer_type():
         return {"error": "missing_name"}, 400
     bed_size = clean_optional(payload.get("bed_size"))
     manufacturer = clean_optional(payload.get("manufacturer"))
+    gcode_prefix = clean_optional(payload.get("gcode_prefix"))
     type_kind = clean_optional(payload.get("type_kind"))
     notes = clean_optional(payload.get("notes"))
     active = normalize_stream_active(payload.get("active"), default=True)
@@ -710,6 +715,7 @@ def post_printer_type():
             name,
             bed_size,
             manufacturer,
+            gcode_prefix,
             active,
             upload_gcode_active,
             type_kind,
@@ -740,6 +746,8 @@ def put_printer_type(type_id: int):
             printer_type.bed_size = clean_optional(payload.get("bed_size"))
         if "manufacturer" in payload:
             printer_type.manufacturer = clean_optional(payload.get("manufacturer"))
+        if "gcode_prefix" in payload:
+            printer_type.gcode_prefix = clean_optional(payload.get("gcode_prefix"))
         if "active" in payload:
             printer_type.active = normalize_stream_active(payload.get("active"), default=True)
         if "upload_gcode_active" in payload:
@@ -896,6 +904,25 @@ def put_printer(printer_id: int):
         printer = get_printer(session, printer_id)
         if printer is None:
             return {"error": "not_found"}, 404
+        if "print_check_status" in payload:
+            candidate = payload.get("print_check_status")
+            clearing = False
+            if isinstance(candidate, bool):
+                clearing = candidate is False
+            elif isinstance(candidate, str):
+                cleaned = candidate.strip().lower().replace(" ", "").replace("_", "")
+                clearing = cleaned in {"clear", "ok", "ready"}
+            if clearing:
+                status_map = collect_printer_statuses([printer], include_plug=False)
+                status = status_map.get(printer.id, {})
+                label = status.get("label")
+                if isinstance(label, str) and "printing" in label.lower():
+                    job_name = clean_optional(status.get("job_name")) or "unknown"
+                    return {
+                        "error": f'Cannot clear status while printing job "{job_name}".',
+                        "code": "printer_busy",
+                        "job_name": job_name,
+                    }, 409
         has_group, group_id, error = normalize_group_id(payload, session)
         if error:
             return error, 400 if error.get("error") == "invalid_group_id" else 404
@@ -934,7 +961,36 @@ def upload_print(printer_id: int):
         printer_type = get_printer_type_by_name(session, type_name)
         if printer_type is None or not printer_type.upload_gcode_active:
             return {"error": "Upload not allowed for this printer type."}, 400
+        check_status = clean_optional(getattr(printer, "print_check_status", None)) or "clear"
+        if check_status.lower() != "clear":
+            return {
+                "error": "Printer check required before upload.",
+                "code": "printer_check_required",
+            }, 409
+        status_map = collect_printer_statuses([printer], include_plug=False)
+        status = status_map.get(printer.id, {})
+        label = status.get("label")
+        if isinstance(label, str) and "printing" in label.lower():
+            job_name = clean_optional(status.get("job_name")) or "unknown"
+            return {
+                "error": f'Printer is currently printing job "{job_name}". Upload aborted.',
+                "code": "printer_busy",
+                "job_name": job_name,
+            }, 409
+        prefix = clean_optional(getattr(printer_type, "gcode_prefix", None))
+        if prefix:
+            filename_lower = filename.lower()
+            prefix_lower = prefix.lower()
+            if prefix_lower not in filename_lower:
+                return {
+                    "error": (
+                        "WARNING: Filename does not contain the required g-Code prefix "
+                        f"\"{prefix}\". Upload aborted."
+                    )
+                }, 400
         ok, message = upload_and_print(printer, filename, content)
+        if ok:
+            printer.print_check_status = "check"
     if ok:
         return {"status": "ok"}
     error_map = {

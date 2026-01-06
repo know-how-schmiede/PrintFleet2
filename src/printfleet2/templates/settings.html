@@ -338,6 +338,10 @@
           </select>
         </label>
         <label>
+          g-Code Praefix
+          <input type="text" id="printerTypeGcodePrefix">
+        </label>
+        <label>
           Bed size
           <input type="text" id="printerTypeBedSize" placeholder="220x220x250">
         </label>
@@ -368,8 +372,9 @@
               <th>Name</th>
               <th>Type</th>
               <th>Hersteller</th>
+              <th>g-Code Praefix</th>
               <th>Bed size</th>
-              <th>Upload G-Code active</th>
+              <th>Upload</th>
               <th>Active</th>
               <th>Notes</th>
               <th>Actions</th>
@@ -377,7 +382,7 @@
           </thead>
           <tbody id="printerTypeTable">
             <tr>
-              <td colspan="7" class="muted">No types yet.</td>
+              <td colspan="9" class="muted">No types yet.</td>
             </tr>
           </tbody>
         </table>

@@ -1,8 +1,17 @@
 # PrintFleet2 Versions
+## 0.7.1 - 2026-1-6
+
+- Präfix Druckertyp in Printer types
+- Check g-Code Prefix vor Upload und Print
+- Check ob Printer aktuell am Drucken ist
+- Tabellen-Layout "Active Printers" Buttons zusammenfassen
+- Regel "Check Status" erst nach Druckende
+- CSS “Check printer”-Statusbutton
 
 ## 0.7.0 - 2026-1-6
 
 - Upload und Print-Button
+- Ergänzung Printer types Ex- und Import
 
 ## 0.6.15 - 2026-1-6
 

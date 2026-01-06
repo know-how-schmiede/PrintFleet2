@@ -98,6 +98,25 @@ document.addEventListener("DOMContentLoaded", () => {
     return trimmed ? trimmed : null;
   }
 
+  function normalizePrintCheckStatus(value, fallback = "clear") {
+    if (value === null || value === undefined) {
+      return fallback;
+    }
+    if (typeof value === "boolean") {
+      return value ? "check" : "clear";
+    }
+    if (typeof value === "string") {
+      const cleaned = value.trim().toLowerCase().replace(/\s+/g, "").replace(/_/g, "");
+      if (cleaned === "check" || cleaned === "checkprinter") {
+        return "check";
+      }
+      if (cleaned === "clear" || cleaned === "ok" || cleaned === "ready") {
+        return "clear";
+      }
+    }
+    return fallback;
+  }
+
   function numericValue(value, fallback) {
     const number = Number(value);
     return Number.isFinite(number) ? number : fallback;
@@ -131,6 +150,7 @@ document.addEventListener("DOMContentLoaded", () => {
       enabled: raw.enabled !== undefined ? !!raw.enabled : true,
       scanning:
         raw.scanning !== undefined ? !!raw.scanning : raw.no_scanning !== undefined ? !raw.no_scanning : true,
+      print_check_status: normalizePrintCheckStatus(raw.print_check_status),
     };
   }
 
@@ -529,8 +549,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const webUrl = hostPart ? `${scheme}://${hostPart}${portPart}` : "";
       const row = document.createElement("tr");
       const typeLabel = printer.printer_type || "-";
+      const checkStatus = normalizePrintCheckStatus(printer.print_check_status);
+      const statusHtml =
+        checkStatus === "check"
+          ? `<button class="printer-status status-warn printer-check-status" type="button" data-printer-id="${printer.id}">Check printer</button>`
+          : `<span class="printer-status printer-status-clear">Clear</span>`;
       row.innerHTML = `
-        <td><strong>${printer.name}</strong><br><span class="muted">${typeLabel}</span></td>
+        <td><strong>${printer.name}</strong><br>${statusHtml}<br><span class="muted">${typeLabel}</span></td>
         <td>${printer.backend}</td>
         <td>${printer.host}</td>
         <td>${printer.enabled ? "Yes" : "No"}</td>
@@ -548,6 +573,7 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
       const editBtn = row.querySelector('[data-action="edit"]');
       const deleteBtn = row.querySelector('[data-action="delete"]');
+      const checkBtn = row.querySelector(".printer-check-status");
       if (editBtn) {
         editBtn.addEventListener("click", () => fillForm(printer));
       }
@@ -562,6 +588,33 @@ document.addEventListener("DOMContentLoaded", () => {
           } else {
             setNotice("Failed to delete printer.", "error");
           }
+        });
+      }
+      if (checkBtn) {
+        checkBtn.addEventListener("click", async () => {
+          const confirmed = window.confirm(
+            "Checkliste vor dem naechsten Druck:\n" +
+              "- Druckbett frei und sauber\n" +
+              "- Passendes Filament geladen\n" +
+              "- G-Code Datei passt zum Druckermodell\n" +
+              "- Achsen und Bauteile frei beweglich\n\n" +
+              "Status auf Clear setzen?"
+          );
+          if (!confirmed) {
+            return;
+          }
+          const res = await fetch("/api/printers/" + printer.id, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ print_check_status: "clear" }),
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            setNotice(data.error || "Failed to update printer status.", "error");
+            return;
+          }
+          setNotice("Printer status cleared.", "success");
+          loadPrinters();
         });
       }
       table.appendChild(row);

@@ -133,6 +133,25 @@ document.addEventListener("DOMContentLoaded", () => {
     return value.trim().toLowerCase();
   }
 
+  function normalizePrintCheckStatus(value, fallback = "clear") {
+    if (value === null || value === undefined) {
+      return fallback;
+    }
+    if (typeof value === "boolean") {
+      return value ? "check" : "clear";
+    }
+    if (typeof value === "string") {
+      const cleaned = value.trim().toLowerCase().replace(/\s+/g, "").replace(/_/g, "");
+      if (cleaned === "check" || cleaned === "checkprinter") {
+        return "check";
+      }
+      if (cleaned === "clear" || cleaned === "ok" || cleaned === "ready") {
+        return "clear";
+      }
+    }
+    return fallback;
+  }
+
   function supportsUpload(printer) {
     const backend = normalizeBackend(printer && printer.backend);
     return uploadBackends.has(backend);
@@ -179,22 +198,39 @@ document.addEventListener("DOMContentLoaded", () => {
     return td;
   }
 
-  function createNameCell(printer, groupMap) {
+  function createNameCell(printer, groupMap, status) {
     const td = document.createElement("td");
     const name = printer && printer.name ? printer.name : "Unnamed printer";
     const groupId = printer && printer.group_id !== undefined ? Number(printer.group_id) : NaN;
     const groupName = Number.isFinite(groupId) && groupId > 0 ? groupMap.get(groupId) : null;
     const groupLabel = groupName ? groupName : "No group";
     const typeName = printer && printer.printer_type ? printer.printer_type : "No type";
+    const checkStatus = normalizePrintCheckStatus(printer && printer.print_check_status);
     const nameLine = document.createElement("strong");
     nameLine.textContent = name;
     const typeLine = document.createElement("div");
     typeLine.className = "muted";
     typeLine.textContent = typeName;
+    const statusLine = document.createElement(checkStatus === "check" ? "button" : "span");
+    if (checkStatus === "check") {
+      statusLine.type = "button";
+      statusLine.className = "printer-status status-warn printer-check-status";
+      statusLine.textContent = "Check printer";
+      if (isPrintingStatus(status)) {
+        statusLine.disabled = true;
+        statusLine.title = "Printing in progress";
+      } else {
+        statusLine.addEventListener("click", () => confirmAndClearPrinterCheck(printer));
+      }
+    } else {
+      statusLine.className = "printer-status printer-status-clear";
+      statusLine.textContent = "Clear";
+    }
     const groupLine = document.createElement("div");
     groupLine.className = "muted";
     groupLine.textContent = groupLabel;
     td.appendChild(nameLine);
+    td.appendChild(statusLine);
     td.appendChild(typeLine);
     td.appendChild(groupLine);
     return td;
@@ -228,6 +264,50 @@ document.addEventListener("DOMContentLoaded", () => {
     return button;
   }
 
+  function normalizeJobName(value) {
+    if (typeof value !== "string") {
+      return "unknown";
+    }
+    const trimmed = value.trim();
+    return trimmed ? trimmed : "unknown";
+  }
+
+  function alertPrinterBusy(printer, jobName) {
+    const printerName = (printer && printer.name) || "Printer";
+    const jobLabel = normalizeJobName(jobName);
+    window.alert(
+      `Upload not possible: ${printerName} is currently running the job "${jobLabel}".`
+    );
+  }
+
+  async function confirmAndClearPrinterCheck(printer) {
+    const printerName = (printer && printer.name) || "Printer";
+    const confirmed = window.confirm(
+      "Checklist before the next print:\n" +
+        "- Print bed is clear and clean\n" +
+        "- Correct filament is loaded\n" +
+        "- G-Code file matches the printer model\n" +
+        "- Axes and parts move freely\n\n" +
+        "Set status to Clear?"
+    );
+    if (!confirmed) {
+      return false;
+    }
+    const res = await fetch(`/api/printers/${printer.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ print_check_status: "clear" }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setNotice(data.error || "Failed to update printer status.", "error");
+      return false;
+    }
+    setNotice(`Printer status cleared for ${printerName}.`, "success");
+    await refreshDashboard();
+    return true;
+  }
+
   async function uploadAndPrint(printer, file, button) {
     if (!printer || !file) {
       return;
@@ -247,6 +327,12 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (data.code === "printer_busy") {
+          alertPrinterBusy(printer, data.job_name);
+        }
+        if (data.code === "printer_check_required") {
+          window.alert(data.error || "Printer check required before upload.");
+        }
         setNotice(data.error || "Upload failed.", "error");
       } else {
         setNotice(`Upload started for ${printerName}.`, "success");
@@ -260,7 +346,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function createActionsCell(printer) {
+  function createActionsCell(printer, status) {
     const td = document.createElement("td");
     const stack = document.createElement("div");
     stack.className = "stack";
@@ -280,12 +366,38 @@ document.addEventListener("DOMContentLoaded", () => {
       if (uploadButton.disabled) {
         return;
       }
+      if (isPrintingStatus(status)) {
+        alertPrinterBusy(printer, status && status.job_name);
+        return;
+      }
+      if (normalizePrintCheckStatus(printer && printer.print_check_status) !== "clear") {
+        confirmAndClearPrinterCheck(printer);
+        return;
+      }
       uploadInput.click();
     });
     uploadInput.addEventListener("change", async () => {
       const file = uploadInput.files && uploadInput.files[0];
       uploadInput.value = "";
       if (!file) {
+        return;
+      }
+      if (isPrintingStatus(status)) {
+        alertPrinterBusy(printer, status && status.job_name);
+        return;
+      }
+      if (normalizePrintCheckStatus(printer && printer.print_check_status) !== "clear") {
+        await confirmAndClearPrinterCheck(printer);
+        return;
+      }
+      const confirmed = window.confirm(
+        "Please confirm before upload:\n" +
+          "- The print bed is clear.\n" +
+          "- The correct filament is loaded.\n" +
+          "- The G-Code file matches this printer model.\n\n" +
+          "Continue with upload and print?"
+      );
+      if (!confirmed) {
         return;
       }
       await uploadAndPrint(printer, file, uploadButton);
@@ -567,14 +679,14 @@ document.addEventListener("DOMContentLoaded", () => {
     sortedPrinters.forEach((printer) => {
       const status = statusMap.get(Number(printer.id)) || {};
       const row = document.createElement("tr");
-      row.appendChild(createNameCell(printer, groupMap));
+      row.appendChild(createNameCell(printer, groupMap, status));
       row.appendChild(createStatusCell(status));
       row.appendChild(createTempCell(status.temp_hotend, status.temp_bed));
       row.appendChild(createTempCell(status.target_hotend, status.target_bed));
       row.appendChild(createCell(status.job_name || "--"));
       row.appendChild(createCell(formatDuration(status.elapsed)));
       row.appendChild(createCell(formatDuration(status.remaining)));
-      row.appendChild(createActionsCell(printer));
+      row.appendChild(createActionsCell(printer, status));
       tableBody.appendChild(row);
     });
   }

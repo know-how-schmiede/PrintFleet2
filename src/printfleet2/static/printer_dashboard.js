@@ -112,6 +112,25 @@ document.addEventListener("DOMContentLoaded", () => {
     return value.trim();
   }
 
+  function normalizePrintCheckStatus(value, fallback = "clear") {
+    if (value === null || value === undefined) {
+      return fallback;
+    }
+    if (typeof value === "boolean") {
+      return value ? "check" : "clear";
+    }
+    if (typeof value === "string") {
+      const cleaned = value.trim().toLowerCase().replace(/\s+/g, "").replace(/_/g, "");
+      if (cleaned === "check" || cleaned === "checkprinter") {
+        return "check";
+      }
+      if (cleaned === "clear" || cleaned === "ok" || cleaned === "ready") {
+        return "clear";
+      }
+    }
+    return fallback;
+  }
+
   function buildWebUiUrl(printer) {
     if (!printer) {
       return "";
@@ -153,18 +172,35 @@ document.addEventListener("DOMContentLoaded", () => {
     return td;
   }
 
-  function createNameCell(printer, groupMap) {
+  function createNameCell(printer, groupMap, status) {
     const td = document.createElement("td");
     const name = printer && printer.name ? printer.name : "Unnamed printer";
     const groupId = printer && printer.group_id !== undefined ? Number(printer.group_id) : NaN;
     const groupName = Number.isFinite(groupId) && groupId > 0 ? groupMap.get(groupId) : null;
     const groupLabel = groupName ? groupName : "No group";
+    const checkStatus = normalizePrintCheckStatus(printer && printer.print_check_status);
     const nameLine = document.createElement("div");
     nameLine.textContent = name;
     const groupLine = document.createElement("div");
     groupLine.className = "muted";
     groupLine.textContent = groupLabel;
+    const statusLine = document.createElement(checkStatus === "check" ? "button" : "span");
+    if (checkStatus === "check") {
+      statusLine.type = "button";
+      statusLine.className = "printer-status status-warn printer-check-status";
+      statusLine.textContent = "Check printer";
+      if (isPrintingStatus(status)) {
+        statusLine.disabled = true;
+        statusLine.title = "Printing in progress";
+      } else {
+        statusLine.addEventListener("click", () => confirmAndClearPrinterCheck(printer));
+      }
+    } else {
+      statusLine.className = "printer-status printer-status-clear";
+      statusLine.textContent = "Clear";
+    }
     td.appendChild(nameLine);
+    td.appendChild(statusLine);
     td.appendChild(groupLine);
     return td;
   }
@@ -180,8 +216,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return td;
   }
 
-  function createActionCell(label, url) {
-    const td = document.createElement("td");
+  function createActionButton(label, url) {
     if (url) {
       const link = document.createElement("a");
       link.className = "btn soft small";
@@ -189,15 +224,50 @@ document.addEventListener("DOMContentLoaded", () => {
       link.target = "_blank";
       link.rel = "noopener";
       link.textContent = label;
-      td.appendChild(link);
-    } else {
-      const button = document.createElement("button");
-      button.className = "btn soft small";
-      button.disabled = true;
-      button.textContent = label;
-      td.appendChild(button);
+      return link;
     }
+    const button = document.createElement("button");
+    button.className = "btn soft small";
+    button.disabled = true;
+    button.textContent = label;
+    return button;
+  }
+
+  function createActionsCell(printer) {
+    const td = document.createElement("td");
+    const stack = document.createElement("div");
+    stack.className = "stack";
+    stack.appendChild(createActionButton("Web UI", buildWebUiUrl(printer)));
+    stack.appendChild(createActionButton("Tasmota", buildTasmotaUrl(printer)));
+    td.appendChild(stack);
     return td;
+  }
+
+  async function confirmAndClearPrinterCheck(printer) {
+    const printerName = (printer && printer.name) || "Printer";
+    const confirmed = window.confirm(
+      "Checklist before the next print:\n" +
+        "- Print bed is clear and clean\n" +
+        "- Correct filament is loaded\n" +
+        "- G-Code file matches the printer model\n" +
+        "- Axes and parts move freely\n\n" +
+        "Set status to Clear?"
+    );
+    if (!confirmed) {
+      return;
+    }
+    const res = await fetch(`/api/printers/${printer.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ print_check_status: "clear" }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      window.alert(data.error || "Failed to update printer status.");
+      return;
+    }
+    window.alert(`Printer status cleared for ${printerName}.`);
+    await refreshDashboard();
   }
 
   function isPrintingStatus(status) {
@@ -421,7 +491,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const activePrinters = printers.filter((printer) => printer && printer.enabled);
     tableBody.innerHTML = "";
     if (!activePrinters.length) {
-      tableBody.innerHTML = "<tr><td colspan=\"9\" class=\"muted\">No active printers loaded yet.</td></tr>";
+      tableBody.innerHTML = "<tr><td colspan=\"8\" class=\"muted\">No active printers loaded yet.</td></tr>";
       return;
     }
     const statusMap = buildStatusMap(statuses);
@@ -431,15 +501,14 @@ document.addEventListener("DOMContentLoaded", () => {
     sortedPrinters.forEach((printer) => {
       const status = statusMap.get(Number(printer.id)) || {};
       const row = document.createElement("tr");
-      row.appendChild(createNameCell(printer, groupMap));
+      row.appendChild(createNameCell(printer, groupMap, status));
       row.appendChild(createStatusCell(status));
       row.appendChild(createTempCell(status.temp_hotend, status.temp_bed));
       row.appendChild(createTempCell(status.target_hotend, status.target_bed));
       row.appendChild(createCell(status.job_name || "--"));
       row.appendChild(createCell(formatDuration(status.elapsed)));
       row.appendChild(createCell(formatDuration(status.remaining)));
-      row.appendChild(createActionCell("Web UI", buildWebUiUrl(printer)));
-      row.appendChild(createActionCell("Tasmota", buildTasmotaUrl(printer)));
+      row.appendChild(createActionsCell(printer));
       tableBody.appendChild(row);
     });
   }
