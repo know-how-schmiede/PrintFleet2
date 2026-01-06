@@ -1,0 +1,26 @@
+{
+  "exported_at": "2026-01-06T20:58:26.906468+00:00",
+  "app_version": "0.7.2",
+  "items": [
+    {
+      "description": "schnelle Drucke mit einfachem Filament",
+      "id": 1,
+      "name": "FastPrint"
+    },
+    {
+      "description": "Einstellungen für GamBody Prints",
+      "id": 4,
+      "name": "GamBodyPrints"
+    },
+    {
+      "description": "PTG verbautes Druckbett",
+      "id": 3,
+      "name": "PTGFutzi"
+    },
+    {
+      "description": "Drucker mit TPU Bett",
+      "id": 2,
+      "name": "TPU"
+    }
+  ]
+}

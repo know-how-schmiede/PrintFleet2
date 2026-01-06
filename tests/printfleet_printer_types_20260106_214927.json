@@ -1,0 +1,72 @@
+{
+  "exported_at": "2026-01-06T20:49:27.578167+00:00",
+  "app_version": "0.7.1",
+  "items": [
+    {
+      "active": true,
+      "bed_size": "220x220x200",
+      "gcode_prefix": null,
+      "id": 10,
+      "manufacturer": "Elegoo",
+      "name": "Centurio Carbon",
+      "notes": null,
+      "type_kind": "Kartesisch",
+      "upload_gcode_active": false
+    },
+    {
+      "active": true,
+      "bed_size": "d180xh200",
+      "gcode_prefix": "FLSUNQ5",
+      "id": 11,
+      "manufacturer": "FLSUN",
+      "name": "FLSun Q5",
+      "notes": null,
+      "type_kind": "Delta",
+      "upload_gcode_active": true
+    },
+    {
+      "active": true,
+      "bed_size": "d200xh220",
+      "gcode_prefix": "FLSUNSR",
+      "id": 12,
+      "manufacturer": "FLSUN",
+      "name": "FLSun SuperRacer",
+      "notes": null,
+      "type_kind": "Delta",
+      "upload_gcode_active": true
+    },
+    {
+      "active": true,
+      "bed_size": "200x200x200",
+      "gcode_prefix": "NEP4PRO",
+      "id": 8,
+      "manufacturer": "Elegoo",
+      "name": "Neptune 4 Pro",
+      "notes": null,
+      "type_kind": "Kartesisch",
+      "upload_gcode_active": true
+    },
+    {
+      "active": true,
+      "bed_size": "300x300x300",
+      "gcode_prefix": "NEP4PLUS",
+      "id": 13,
+      "manufacturer": "Elegoo",
+      "name": "Neptune 4 plus",
+      "notes": null,
+      "type_kind": "Kartesisch",
+      "upload_gcode_active": true
+    },
+    {
+      "active": true,
+      "bed_size": null,
+      "gcode_prefix": null,
+      "id": 14,
+      "manufacturer": null,
+      "name": "X1 Carbon",
+      "notes": "Bambulab",
+      "type_kind": "Kartesisch",
+      "upload_gcode_active": false
+    }
+  ]
+}
