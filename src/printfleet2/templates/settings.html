@@ -281,7 +281,7 @@
           Description
           <textarea id="printerGroupDescription" rows="3"></textarea>
         </label>
-        <div class="form-actions">
+        <div class="form-actions full">
           <button class="btn primary" type="submit" id="printerGroupSubmit">Save group</button>
           <button class="btn outline" type="button" id="printerGroupReset">Clear</button>
         </div>
@@ -353,9 +353,12 @@
           Notes
           <textarea id="printerTypeNotes" rows="3"></textarea>
         </label>
-        <div class="form-actions">
+        <div class="form-actions full">
           <button class="btn primary" type="submit" id="printerTypeSubmit">Save type</button>
           <button class="btn outline" type="button" id="printerTypeReset">Clear</button>
+          <button class="btn soft" type="button" id="printerTypeExport">Export JSON</button>
+          <button class="btn soft" type="button" id="printerTypeImport">Import JSON</button>
+          <input type="file" id="printerTypeImportFile" accept=".json,application/json" hidden>
         </div>
       </form>
       <div class="table-wrap">

@@ -1,5 +1,19 @@
 # PrintFleet2 Versions
 
+## 0.7.0 - 2026-1-6
+
+- Upload und Print-Button
+
+## 0.6.15 - 2026-1-6
+
+- Ex- und Import JSON Printer-Types
+- Reorganisation Buttons Printer-Type
+- Button "Just Print" auf Homepage
+- Neue Seite "Just Print" mit Print-Liste
+- Layout-Anpassungen Liste "Just Print"
+- Buttons "Printer dash" und "Just Print" in Nav-Leiste
+- Button "Docs" entfernt
+
 ## 0.6.14 - 2026-1-5
 
 - Printers Englische Bezeichner

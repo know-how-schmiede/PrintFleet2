@@ -19,9 +19,12 @@ Status: MVP in progress (users, printers, settings, Live-Wall).
 - Live-Wall printer layout controls (printers per row 1-5, data density: light/normal/all)
 - Printer management with active list on Live-Wall
 - Printer groups and printer type catalogs in Settings
+- Printer types export/import as JSON (includes export timestamp + app version)
+- Settings export/import as JSON for backup/restore
 - Live-Wall status and plug status JSON feeds for external displays
 - Network scan API endpoint to discover devices on the local subnet
 - User import/export API endpoints for migration and backups
+- "Just Printing" view for printers with Upload G-Code active
 - API docs page at `/docs` plus JSON listing at `/api/docs`
 - Versioning file and changelog in docs
 
@@ -69,14 +72,19 @@ PrintFleet2/
         user_service.py
       static/
         live_wall.js
+        printer_dashboard.js
+        printer_just.js
         printers.js
         settings.js
         style.css
       templates/
         base.html
         docs.html
+        index.html
         live_wall.html
         login.html
+        printer_dashboard.html
+        printer_just.html
         printers.html
         settings.html
         users.html

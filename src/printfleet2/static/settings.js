@@ -26,6 +26,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const typeResetBtn = document.getElementById("printerTypeReset");
   const typeSubmitBtn = document.getElementById("printerTypeSubmit");
   const typeTable = document.getElementById("printerTypeTable");
+  const typeExportBtn = document.getElementById("printerTypeExport");
+  const typeImportBtn = document.getElementById("printerTypeImport");
+  const typeImportFile = document.getElementById("printerTypeImportFile");
 
   if (!form || !notice || !resetBtn) {
     return;
@@ -313,6 +316,22 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
+  function buildPrinterTypeExportFileName() {
+    const now = new Date();
+    const pad = (value) => String(value).padStart(2, "0");
+    return (
+      "printfleet_printer_types_" +
+      now.getFullYear() +
+      pad(now.getMonth() + 1) +
+      pad(now.getDate()) +
+      "_" +
+      pad(now.getHours()) +
+      pad(now.getMinutes()) +
+      pad(now.getSeconds()) +
+      ".json"
+    );
+  }
+
   async function loadSettings() {
     setNotice("", "");
     const res = await fetch("/api/settings");
@@ -386,6 +405,22 @@ document.addEventListener("DOMContentLoaded", () => {
       return payload.settings;
     }
     return payload;
+  }
+
+  function extractImportPrinterTypes(payload) {
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+    if (payload && Array.isArray(payload.items)) {
+      return payload.items;
+    }
+    if (payload && Array.isArray(payload.printer_types)) {
+      return payload.printer_types;
+    }
+    if (payload && Array.isArray(payload.types)) {
+      return payload.types;
+    }
+    return null;
   }
 
   function applyImportSettings(settings) {
@@ -816,6 +851,91 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (typeResetBtn) {
       typeResetBtn.addEventListener("click", () => clearTypeForm());
+    }
+
+    if (typeExportBtn) {
+      typeExportBtn.addEventListener("click", async () => {
+        typeExportBtn.disabled = true;
+        setTypeNotice("Preparing printer type export...", "success");
+        try {
+          const res = await fetch("/api/printer-types/export");
+          if (!res.ok) {
+            throw new Error("export_failed");
+          }
+          const data = await res.json().catch(() => ({}));
+          const items = Array.isArray(data.items) ? data.items : [];
+          downloadJson(buildPrinterTypeExportFileName(), {
+            exported_at: data.exported_at || new Date().toISOString(),
+            app_version: data.app_version || null,
+            items,
+          });
+          setTypeNotice(`Exported ${items.length} printer type(s).`, "success");
+        } catch (error) {
+          setTypeNotice("Failed to export printer types.", "error");
+        } finally {
+          typeExportBtn.disabled = false;
+        }
+      });
+    }
+
+    if (typeImportBtn && typeImportFile) {
+      typeImportBtn.addEventListener("click", () => typeImportFile.click());
+      typeImportFile.addEventListener("change", async () => {
+        const file = typeImportFile.files && typeImportFile.files[0];
+        typeImportFile.value = "";
+        if (!file) {
+          return;
+        }
+        let payload;
+        try {
+          const text = await file.text();
+          payload = JSON.parse(text);
+        } catch (error) {
+          setTypeNotice("Invalid JSON file.", "error");
+          return;
+        }
+        const items = extractImportPrinterTypes(payload);
+        if (!items) {
+          setTypeNotice("JSON must contain printer types.", "error");
+          return;
+        }
+        if (!items.length) {
+          setTypeNotice("No printer types found in JSON.", "error");
+          return;
+        }
+        if (!confirm(`Import ${items.length} printer type(s)? Existing names will be updated.`)) {
+          return;
+        }
+        typeImportBtn.disabled = true;
+        setTypeNotice(`Importing ${items.length} printer type(s)...`, "success");
+        try {
+          const res = await fetch("/api/printer-types/import", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ items }),
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            setTypeNotice(data.error || "Failed to import printer types.", "error");
+            typeImportBtn.disabled = false;
+            return;
+          }
+          const data = await res.json().catch(() => ({}));
+          const created = Number(data.created) || 0;
+          const updated = Number(data.updated) || 0;
+          const skipped = Number(data.skipped) || 0;
+          const invalid = Number(data.invalid) || 0;
+          setTypeNotice(
+            `Import complete: ${created} created, ${updated} updated, ${skipped} skipped, ${invalid} invalid.`,
+            "success"
+          );
+          typeImportBtn.disabled = false;
+          loadPrinterTypes();
+        } catch (error) {
+          setTypeNotice("Failed to import printer types.", "error");
+          typeImportBtn.disabled = false;
+        }
+      });
     }
 
     clearTypeForm({ keepNotice: true });

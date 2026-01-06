@@ -47,6 +47,7 @@ from printfleet2.services.settings_service import (
     settings_to_dict,
     update_settings,
 )
+from printfleet2.services.printer_upload_service import upload_and_print
 from printfleet2.services.net_scan_service import scan_local_network
 from printfleet2.services.user_service import (
     create_user,
@@ -58,6 +59,7 @@ from printfleet2.services.user_service import (
     user_to_dict,
 )
 from printfleet2.services.auth_service import hash_password, verify_password
+from printfleet2.version import VERSION
 
 
 bp = Blueprint("web", __name__)
@@ -475,6 +477,41 @@ def printer_dashboard_page():
     )
 
 
+@bp.get("/printer-just")
+def printer_just_page():
+    with session_scope() as session:
+        printers = list_printers(session)
+        enabled_printers = [printer for printer in printers if printer.enabled]
+        snapshots = build_printer_snapshots(enabled_printers)
+    status_map = collect_printer_statuses(snapshots, include_plug=False)
+    active_prints = 0
+    active_errors = 0
+    for printer in snapshots:
+        status = status_map.get(
+            printer.id,
+            {
+                "label": "Unknown",
+                "state": "muted",
+                "error_message": None,
+            },
+        )
+        label = status.get("label")
+        if isinstance(label, str) and "printing" in label.lower():
+            active_prints += 1
+        error_message = status.get("error_message")
+        if status.get("state") == "error" or (isinstance(error_message, str) and error_message.strip()):
+            active_errors += 1
+    snapshot = {
+        "total_printers": len(printers),
+        "active_prints": active_prints,
+        "active_errors": active_errors,
+    }
+    return render_template(
+        "printer_just.html",
+        snapshot=snapshot,
+    )
+
+
 @bp.get("/api/settings")
 def get_settings():
     with session_scope() as session:
@@ -569,6 +606,85 @@ def get_printer_types():
     with session_scope() as session:
         types = list_printer_types(session)
         return {"items": [printer_type_to_dict(item) for item in types]}
+
+
+@bp.get("/api/printer-types/export")
+def export_printer_types():
+    with session_scope() as session:
+        types = list_printer_types(session)
+        return {
+            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "app_version": VERSION,
+            "items": [printer_type_to_dict(item) for item in types],
+        }
+
+
+@bp.post("/api/printer-types/import")
+def import_printer_types():
+    payload = request.get_json(silent=True) or {}
+    if isinstance(payload, list):
+        items = payload
+    elif isinstance(payload, dict):
+        items = payload.get("items") or payload.get("printer_types") or payload.get("types")
+    else:
+        items = None
+    if not isinstance(items, list):
+        return {"error": "invalid_json"}, 400
+    created = 0
+    updated = 0
+    skipped = 0
+    invalid = 0
+    seen_names: set[str] = set()
+    with session_scope() as session:
+        for raw in items:
+            if not isinstance(raw, dict):
+                invalid += 1
+                continue
+            name = normalize_type_name(raw.get("name"))
+            if not name:
+                invalid += 1
+                continue
+            name_key = name.lower()
+            if name_key in seen_names:
+                skipped += 1
+                continue
+            seen_names.add(name_key)
+            bed_size = clean_optional(raw.get("bed_size")) if "bed_size" in raw else None
+            manufacturer = clean_optional(raw.get("manufacturer")) if "manufacturer" in raw else None
+            type_kind = clean_optional(raw.get("type_kind")) if "type_kind" in raw else None
+            notes = clean_optional(raw.get("notes")) if "notes" in raw else None
+            active_present = "active" in raw
+            upload_present = "upload_gcode_active" in raw
+            active = normalize_stream_active(raw.get("active"), default=True)
+            upload_gcode_active = normalize_stream_active(raw.get("upload_gcode_active"), default=False)
+            existing = get_printer_type_by_name(session, name)
+            if existing is None:
+                create_printer_type(
+                    session,
+                    name,
+                    bed_size,
+                    manufacturer,
+                    active,
+                    upload_gcode_active,
+                    type_kind,
+                    notes,
+                )
+                created += 1
+            else:
+                if "bed_size" in raw:
+                    existing.bed_size = bed_size
+                if "manufacturer" in raw:
+                    existing.manufacturer = manufacturer
+                if active_present:
+                    existing.active = active
+                if upload_present:
+                    existing.upload_gcode_active = upload_gcode_active
+                if "type_kind" in raw:
+                    existing.type_kind = type_kind
+                if "notes" in raw:
+                    existing.notes = notes
+                updated += 1
+    return {"created": created, "updated": updated, "skipped": skipped, "invalid": invalid}
 
 
 @bp.post("/api/printer-types")
@@ -797,6 +913,40 @@ def delete_printer_by_id(printer_id: int):
             return {"error": "not_found"}, 404
         delete_printer(session, printer)
         return {"status": "deleted"}
+
+
+@bp.post("/api/printers/<int:printer_id>/upload-print")
+def upload_print(printer_id: int):
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return {"error": "Missing file."}, 400
+    content = file.read()
+    if not content:
+        return {"error": "Empty file."}, 400
+    filename = file.filename
+    with session_scope() as session:
+        printer = get_printer(session, printer_id)
+        if printer is None:
+            return {"error": "Printer not found."}, 404
+        type_name = clean_optional(printer.printer_type)
+        if not type_name:
+            return {"error": "Upload not allowed for this printer type."}, 400
+        printer_type = get_printer_type_by_name(session, type_name)
+        if printer_type is None or not printer_type.upload_gcode_active:
+            return {"error": "Upload not allowed for this printer type."}, 400
+        ok, message = upload_and_print(printer, filename, content)
+    if ok:
+        return {"status": "ok"}
+    error_map = {
+        "api_key_missing": "API key missing for this printer.",
+        "api_key_invalid": "API key invalid for this printer.",
+        "auth_required": "Printer authentication required.",
+        "unsupported_backend": "Unsupported backend for upload.",
+        "upload_failed": "Upload failed.",
+    }
+    error_message = error_map.get(message, message or "Upload failed.")
+    status_code = 400 if message in {"api_key_missing", "api_key_invalid", "auth_required", "unsupported_backend"} else 502
+    return {"error": error_message}, status_code
 
 
 @bp.get("/api/users")
@@ -1033,6 +1183,8 @@ def api_docs():
             {"method": "PATCH", "path": "/api/printer-groups/{id}"},
             {"method": "DELETE", "path": "/api/printer-groups/{id}"},
             {"method": "GET", "path": "/api/printer-types"},
+            {"method": "GET", "path": "/api/printer-types/export"},
+            {"method": "POST", "path": "/api/printer-types/import"},
             {"method": "POST", "path": "/api/printer-types"},
             {"method": "PUT", "path": "/api/printer-types/{id}"},
             {"method": "PATCH", "path": "/api/printer-types/{id}"},
