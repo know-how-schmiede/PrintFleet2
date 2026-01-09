@@ -1,5 +1,11 @@
 # PrintFleet2 Versions
 
+## 0.7.3 - 2026-1-9
+
+- Verbesserung Network Scan
+- fix: noabebled Printer bei Just Print
+- Live Snapshot, Printer all und Printer enabeld
+
 ## 0.7.2 - 2026-1-6
 
 - BugFix Import JSON Printer

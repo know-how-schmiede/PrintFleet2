@@ -94,6 +94,22 @@ def _extract_title(body: str) -> str | None:
     return title or None
 
 
+def _detect_neptune(text: str) -> tuple[str, str] | None:
+    if not text:
+        return None
+    lower = text.lower()
+    if "neptune" not in lower:
+        return None
+    match = re.search(r"neptune[-_\s]*4[-_\s]*(plus|pro|max)?", lower)
+    if match:
+        variant = match.group(1)
+        label = "Elegoo Neptune 4"
+        if variant:
+            label = f"Elegoo Neptune 4 {variant.title()}"
+        return "elegoo-neptune", label
+    return "elegoo-neptune", "Elegoo Neptune"
+
+
 def _detect_from_html(body: str, headers: dict) -> tuple[str, str] | None:
     lower = body.lower()
     server = str(headers.get("Server", "")).lower()
@@ -101,6 +117,15 @@ def _detect_from_html(body: str, headers: dict) -> tuple[str, str] | None:
         return "tasmota", "Tasmota Steckdose"
     if "octoprint" in lower:
         return "octoprint", "OctoPrint"
+    neptune = _detect_neptune(body)
+    if neptune:
+        return neptune
+    if "elegoo" in lower and ("mainsail" in lower or "fluidd" in lower or "klipper" in lower):
+        return "elegoo-neptune", "Elegoo Neptune"
+    if "mainsail" in lower:
+        return "moonraker", "Mainsail (Moonraker)"
+    if "fluidd" in lower:
+        return "moonraker", "Fluidd (Moonraker)"
     if "elegoo" in lower or "centauri" in lower or "centurio" in lower:
         return "elegoo-centurio-carbon", "Elegoo Centurio Carbon"
     return None
@@ -116,10 +141,14 @@ def _scan_target(host: str, port: int) -> list[dict]:
             system_info = result.get("system_info")
             if isinstance(system_info, dict):
                 name = system_info.get("hostname")
+            neptune = _detect_neptune(name or "")
+            dtype, label = ("moonraker", "Moonraker")
+            if neptune:
+                dtype, label = neptune
             return [
                 {
-                    "type": "moonraker",
-                    "label": "Moonraker",
+                    "type": dtype,
+                    "label": label,
                     "host": host,
                     "port": port,
                     "scheme": scheme,

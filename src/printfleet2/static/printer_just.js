@@ -133,6 +133,32 @@ document.addEventListener("DOMContentLoaded", () => {
     return value.trim().toLowerCase();
   }
 
+  function normalizeEnabled(value, fallback = false) {
+    if (value === null || value === undefined) {
+      return fallback;
+    }
+    if (typeof value === "boolean") {
+      return value;
+    }
+    if (typeof value === "number") {
+      return value !== 0;
+    }
+    if (typeof value === "string") {
+      const lowered = value.trim().toLowerCase();
+      if (lowered === "1" || lowered === "true" || lowered === "yes" || lowered === "on") {
+        return true;
+      }
+      if (lowered === "0" || lowered === "false" || lowered === "no" || lowered === "off") {
+        return false;
+      }
+    }
+    return fallback;
+  }
+
+  function isPrinterEnabled(printer) {
+    return normalizeEnabled(printer && printer.enabled, false);
+  }
+
   function normalizePrintCheckStatus(value, fallback = "clear") {
     if (value === null || value === undefined) {
       return fallback;
@@ -655,6 +681,9 @@ document.addEventListener("DOMContentLoaded", () => {
       return [];
     }
     return printers.filter((printer) => {
+      if (!isPrinterEnabled(printer)) {
+        return false;
+      }
       const typeName = normalizeTypeName(printer && printer.printer_type);
       if (!typeName) {
         return false;
@@ -696,9 +725,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const statuses = (statusData && statusData.items) || [];
     const totalPrinters = statusData ? Number(statusData.total_printers) : NaN;
     const totalCount = Number.isFinite(totalPrinters) ? totalPrinters : printers.length || statuses.length;
-    const printerCount = document.getElementById("printerCount");
-    if (printerCount) {
-      printerCount.textContent = Number.isFinite(totalCount) ? totalCount : "--";
+    const enabledCount =
+      statusData && Array.isArray(statusData.items)
+        ? statusData.items.length
+        : printers.filter(isPrinterEnabled).length;
+    const printerCountAll =
+      document.getElementById("printerCountAll") || document.getElementById("printerCount");
+    if (printerCountAll) {
+      printerCountAll.textContent = Number.isFinite(totalCount) ? totalCount : "--";
+    }
+    const printerCountEnabled = document.getElementById("printerCountEnabled");
+    if (printerCountEnabled) {
+      printerCountEnabled.textContent = Number.isFinite(enabledCount) ? enabledCount : "--";
     }
 
     const activePrintsEl = document.getElementById("activePrintsCount");

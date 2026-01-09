@@ -503,6 +503,7 @@ def printer_just_page():
             active_errors += 1
     snapshot = {
         "total_printers": len(printers),
+        "enabled_printers": len(enabled_printers),
         "active_prints": active_prints,
         "active_errors": active_errors,
     }

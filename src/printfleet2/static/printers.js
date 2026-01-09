@@ -20,6 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const tabPanels = Array.from(document.querySelectorAll("[data-printer-panel]"));
   const netScanFilters = [
     { id: "netScanFilterElegoo", type: "elegoo-centurio-carbon" },
+    { id: "netScanFilterNeptune", type: "elegoo-neptune" },
     { id: "netScanFilterMoonraker", type: "moonraker" },
     { id: "netScanFilterOctoPrint", type: "octoprint" },
     { id: "netScanFilterTasmota", type: "tasmota" },
@@ -663,6 +664,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (raw.includes("tasmota")) {
       return "tasmota";
+    }
+    if (raw.includes("neptune")) {
+      return "elegoo-neptune";
     }
     if (raw.includes("elegoo") || raw.includes("centurio") || raw.includes("centauri")) {
       return "elegoo-centurio-carbon";
