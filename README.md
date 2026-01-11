@@ -132,3 +132,7 @@ Changes are logged in `docs/Version.md`.
 - Local config files (e.g. `.env`) are not committed.
 - Database files and runtime artifacts are ignored by `.gitignore`.
 - Database URL is read from `DATABASE_URL` (fallback: `data/printfleet2.sqlite3`).
+
+## Support the project
+
+If you want to support the project, you can contribute via the Amazon wishlist: https://www.amazon.de/hz/wishlist/ls/LHL8DJWGYH8D?ref_=wl_share
