@@ -18,6 +18,8 @@ def ensure_settings_schema(session: Session) -> None:
         missing["live_wall_printer_data"] = "TEXT"
     if "live_wall_plug_poll_interval" not in columns:
         missing["live_wall_plug_poll_interval"] = "REAL"
+    if "filename_display_length" not in columns:
+        missing["filename_display_length"] = "INTEGER"
     if "kiosk_stream_active_1" not in columns:
         missing["kiosk_stream_active_1"] = "INTEGER DEFAULT 1"
     if "kiosk_stream_active_2" not in columns:
@@ -42,6 +44,8 @@ def ensure_settings_schema(session: Session) -> None:
                 conn.execute(text(f"ALTER TABLE settings ADD COLUMN {column_name} {column_type}"))
             if "live_wall_plug_poll_interval" in missing:
                 conn.execute(text("UPDATE settings SET live_wall_plug_poll_interval = 5.0"))
+            if "filename_display_length" in missing:
+                conn.execute(text("UPDATE settings SET filename_display_length = 32"))
             for active_column in (
                 "kiosk_stream_active_1",
                 "kiosk_stream_active_2",
@@ -87,6 +91,20 @@ def normalize_plug_poll_interval(value: object | None) -> float | None:
     return parsed
 
 
+def normalize_filename_display_length(value: object | None) -> int:
+    if value is None:
+        return 32
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return 32
+    if parsed < 10:
+        return 10
+    if parsed > 120:
+        return 120
+    return parsed
+
+
 def normalize_stream_active(value: object | None, default: bool = False) -> bool:
     if value is None:
         return default
@@ -105,6 +123,7 @@ def ensure_settings_row(session: Session) -> Settings:
             id=1,
             poll_interval=5.0,
             db_reload_interval=30.0,
+            filename_display_length=32,
             language="en",
             theme="lightTheme",
             kiosk_stream_layout="standard",
@@ -125,6 +144,7 @@ def settings_to_dict(settings: Settings) -> dict:
         "id": settings.id,
         "poll_interval": settings.poll_interval,
         "db_reload_interval": settings.db_reload_interval,
+        "filename_display_length": settings.filename_display_length,
         "telegram_chat_id": settings.telegram_chat_id,
         "language": settings.language,
         "theme": settings.theme,
@@ -169,6 +189,7 @@ def update_settings(settings: Settings, data: dict) -> Settings:
     for field in (
         "poll_interval",
         "db_reload_interval",
+        "filename_display_length",
         "telegram_chat_id",
         "language",
         "theme",
@@ -221,6 +242,8 @@ def update_settings(settings: Settings, data: dict) -> Settings:
         settings.live_wall_plug_poll_interval = normalize_plug_poll_interval(
             settings.live_wall_plug_poll_interval
         )
+    if "filename_display_length" in data:
+        settings.filename_display_length = normalize_filename_display_length(settings.filename_display_length)
     for field in (
         "kiosk_stream_active_1",
         "kiosk_stream_active_2",

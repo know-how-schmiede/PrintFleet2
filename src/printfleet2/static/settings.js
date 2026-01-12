@@ -70,6 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const fields = {
     poll_interval: "settingPollInterval",
     db_reload_interval: "settingReloadInterval",
+    filename_display_length: "settingFilenameDisplayLength",
     telegram_chat_id: "settingTelegramChatId",
     language: "settingLanguage",
     theme: "settingTheme",
@@ -112,6 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const numericFields = new Set(["poll_interval", "db_reload_interval", "live_wall_plug_poll_interval"]);
   const integerFields = {
     live_wall_printer_columns: { min: 1, max: 5 },
+    filename_display_length: { min: 10, max: 120 },
   };
   const numericBounds = {
     live_wall_plug_poll_interval: { min: 1, max: 300 },
@@ -196,6 +198,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (fieldId === "settingLiveWallPlugPollInterval" && (value === null || value === undefined || value === "")) {
       field.value = "5";
+      return;
+    }
+    if (fieldId === "settingFilenameDisplayLength" && (value === null || value === undefined || value === "")) {
+      field.value = "32";
       return;
     }
     field.value = value ?? "";

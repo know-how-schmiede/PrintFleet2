@@ -210,7 +210,7 @@ def _moonraker_status(printer: PrinterSnapshot, plug_label: str | None, plug_sta
         f"{_printer_base_url(printer)}/printer/objects/query?"
         "print_stats=state,filename,print_duration,total_duration,message&"
         "virtual_sdcard=progress&display_status=progress&"
-        "extruder=temperature&heater_bed=temperature",
+        "extruder=temperature,target&heater_bed=temperature,target",
         headers,
     )[1]
     status = _extract_moonraker_status(objects_payload)

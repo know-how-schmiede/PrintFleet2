@@ -1,10 +1,17 @@
 # PrintFleet2 Versions
 
+## 0.7.4 - 2026-1-12
+
+- Dateinamen in Just Print kürzen, Vollständiger Dateiname per Tool-Tip
+- Anzahl Zeichen als Setting in General
+
 ## 0.7.3 - 2026-1-9
 
 - Verbesserung Network Scan
 - fix: noabebled Printer bei Just Print
 - Live Snapshot, Printer all und Printer enabeld
+- Target-Temperatur Anzeige von Elegoo Neptune 4 Plus und 4 Pro
+- Button "Check printer" direkt unter Druckernamen positionieren
 
 ## 0.7.2 - 2026-1-6
 

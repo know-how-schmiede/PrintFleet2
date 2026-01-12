@@ -9,6 +9,10 @@ document.addEventListener("DOMContentLoaded", () => {
   let sortState = { key: null, direction: "asc" };
   let pollIntervalId = null;
   let pollIntervalMs = 5000;
+  const DEFAULT_FILENAME_DISPLAY_LENGTH = 32;
+  const MIN_FILENAME_DISPLAY_LENGTH = 10;
+  const MAX_FILENAME_DISPLAY_LENGTH = 120;
+  let filenameDisplayLength = DEFAULT_FILENAME_DISPLAY_LENGTH;
   let cachedPrinters = [];
   let cachedStatuses = [];
   let cachedGroups = [];
@@ -60,6 +64,31 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     pollIntervalMs = nextInterval;
     scheduleRefresh();
+  }
+
+  function normalizeFilenameDisplayLength(value) {
+    if (value === null || value === undefined || value === "") {
+      return DEFAULT_FILENAME_DISPLAY_LENGTH;
+    }
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      return DEFAULT_FILENAME_DISPLAY_LENGTH;
+    }
+    const rounded = Math.round(parsed);
+    if (rounded < MIN_FILENAME_DISPLAY_LENGTH) {
+      return MIN_FILENAME_DISPLAY_LENGTH;
+    }
+    if (rounded > MAX_FILENAME_DISPLAY_LENGTH) {
+      return MAX_FILENAME_DISPLAY_LENGTH;
+    }
+    return rounded;
+  }
+
+  function updateFilenameDisplayLength(settings) {
+    if (!settings) {
+      return;
+    }
+    filenameDisplayLength = normalizeFilenameDisplayLength(settings.filename_display_length);
   }
 
   function scheduleRefresh() {
@@ -224,6 +253,39 @@ document.addEventListener("DOMContentLoaded", () => {
     return td;
   }
 
+  function normalizeJobDisplay(value) {
+    if (typeof value !== "string") {
+      return "--";
+    }
+    const trimmed = value.trim();
+    return trimmed ? trimmed : "--";
+  }
+
+  function truncateText(text, maxLength) {
+    if (!Number.isFinite(maxLength) || maxLength <= 0) {
+      return text;
+    }
+    if (text.length <= maxLength) {
+      return text;
+    }
+    if (maxLength <= 3) {
+      return text.slice(0, maxLength);
+    }
+    return `${text.slice(0, maxLength - 3)}...`;
+  }
+
+  function createJobCell(jobName) {
+    const td = document.createElement("td");
+    const normalized = normalizeJobDisplay(jobName);
+    if (normalized === "--") {
+      td.textContent = normalized;
+      return td;
+    }
+    td.textContent = truncateText(normalized, filenameDisplayLength);
+    td.title = normalized;
+    return td;
+  }
+
   function createNameCell(printer, groupMap, status) {
     const td = document.createElement("td");
     const name = printer && printer.name ? printer.name : "Unnamed printer";
@@ -232,8 +294,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const groupLabel = groupName ? groupName : "No group";
     const typeName = printer && printer.printer_type ? printer.printer_type : "No type";
     const checkStatus = normalizePrintCheckStatus(printer && printer.print_check_status);
-    const nameLine = document.createElement("strong");
-    nameLine.textContent = name;
+    const nameLine = document.createElement("div");
+    const nameLabel = document.createElement("strong");
+    nameLabel.textContent = name;
+    nameLine.appendChild(nameLabel);
     const typeLine = document.createElement("div");
     typeLine.className = "muted";
     typeLine.textContent = typeName;
@@ -712,7 +776,7 @@ document.addEventListener("DOMContentLoaded", () => {
       row.appendChild(createStatusCell(status));
       row.appendChild(createTempCell(status.temp_hotend, status.temp_bed));
       row.appendChild(createTempCell(status.target_hotend, status.target_bed));
-      row.appendChild(createCell(status.job_name || "--"));
+      row.appendChild(createJobCell(status.job_name));
       row.appendChild(createCell(formatDuration(status.elapsed)));
       row.appendChild(createCell(formatDuration(status.remaining)));
       row.appendChild(createActionsCell(printer, status));
@@ -803,6 +867,7 @@ document.addEventListener("DOMContentLoaded", () => {
       fetchJson("/api/printer-types"),
     ]);
     updatePollInterval(settingsData);
+    updateFilenameDisplayLength(settingsData);
     updateSnapshot(printersData, statusData, energyData);
     cachedPrinters = (printersData && printersData.items) || [];
     cachedStatuses = (statusData && statusData.items) || [];
