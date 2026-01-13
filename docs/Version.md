@@ -1,5 +1,10 @@
 # PrintFleet2 Versions
 
+## 0.7.5 - 2026-1-13
+
+- fix: Fehlermeldung bei Datei-Upload
+- UPLOAD_TIMEOUT in Settings / General
+
 ## 0.7.4 - 2026-1-12
 
 - Dateinamen in Just Print kürzen, Vollständiger Dateiname per Tool-Tip

@@ -8,20 +8,27 @@ from uuid import uuid4
 from printfleet2.models.printer import Printer
 
 
-UPLOAD_TIMEOUT = 20
+DEFAULT_UPLOAD_TIMEOUT = 120
 USER_AGENT = "PrintFleet2 Upload"
 
 
-def upload_and_print(printer: Printer, filename: str, content: bytes) -> tuple[bool, str]:
+def upload_and_print(
+    printer: Printer,
+    filename: str,
+    content: bytes,
+    upload_timeout: int | float | None = None,
+) -> tuple[bool, str]:
     backend = (printer.backend or "").strip().lower()
     if backend == "octoprint":
-        return _upload_octoprint(printer, filename, content)
+        return _upload_octoprint(printer, filename, content, upload_timeout)
     if backend == "moonraker":
-        return _upload_moonraker(printer, filename, content)
+        return _upload_moonraker(printer, filename, content, upload_timeout)
     return False, "unsupported_backend"
 
 
-def _upload_octoprint(printer: Printer, filename: str, content: bytes) -> tuple[bool, str]:
+def _upload_octoprint(
+    printer: Printer, filename: str, content: bytes, upload_timeout: int | float | None
+) -> tuple[bool, str]:
     if not printer.api_key:
         return False, "api_key_missing"
     url = f"{_printer_base_url(printer)}/api/files/local"
@@ -32,8 +39,9 @@ def _upload_octoprint(printer: Printer, filename: str, content: bytes) -> tuple[
         fields=fields,
         filename=filename,
         content=content,
+        timeout=upload_timeout,
     )
-    if status in {200, 201, 204}:
+    if _is_success_status(status):
         return True, "ok"
     if status in {401, 403}:
         return False, "api_key_invalid"
@@ -41,7 +49,9 @@ def _upload_octoprint(printer: Printer, filename: str, content: bytes) -> tuple[
     return False, message or "upload_failed"
 
 
-def _upload_moonraker(printer: Printer, filename: str, content: bytes) -> tuple[bool, str]:
+def _upload_moonraker(
+    printer: Printer, filename: str, content: bytes, upload_timeout: int | float | None
+) -> tuple[bool, str]:
     url = f"{_printer_base_url(printer)}/server/files/upload"
     headers = {"User-Agent": USER_AGENT}
     if printer.token:
@@ -54,8 +64,9 @@ def _upload_moonraker(printer: Printer, filename: str, content: bytes) -> tuple[
         fields=fields,
         filename=filename,
         content=content,
+        timeout=upload_timeout,
     )
-    if status in {200, 201}:
+    if _is_success_status(status):
         return True, "ok"
     if status in {401, 403}:
         return False, "auth_required"
@@ -69,6 +80,7 @@ def _post_multipart(
     fields: dict,
     filename: str,
     content: bytes,
+    timeout: int | float | None,
 ) -> tuple[int | None, bytes | None]:
     boundary = uuid4().hex
     body = _encode_multipart(fields, filename, content, boundary)
@@ -80,12 +92,30 @@ def _post_multipart(
     request = urllib.request.Request(url, data=body, headers=request_headers, method="POST")
     try:
         context = ssl._create_unverified_context() if url.startswith("https://") else None
-        with urllib.request.urlopen(request, timeout=UPLOAD_TIMEOUT, context=context) as response:
+        with urllib.request.urlopen(
+            request, timeout=_resolve_timeout(timeout), context=context
+        ) as response:
             return response.status, response.read()
     except urllib.error.HTTPError as exc:
         return exc.code, exc.read()
     except Exception:
         return None, None
+
+
+def _is_success_status(status: int | None) -> bool:
+    return status is not None and 200 <= status < 300
+
+
+def _resolve_timeout(timeout: int | float | None) -> float:
+    if timeout is None:
+        return float(DEFAULT_UPLOAD_TIMEOUT)
+    try:
+        parsed = float(timeout)
+    except (TypeError, ValueError):
+        return float(DEFAULT_UPLOAD_TIMEOUT)
+    if parsed <= 0:
+        return float(DEFAULT_UPLOAD_TIMEOUT)
+    return parsed
 
 
 def _encode_multipart(fields: dict, filename: str, content: bytes, boundary: str) -> bytes:

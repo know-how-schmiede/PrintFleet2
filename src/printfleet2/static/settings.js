@@ -71,6 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
     poll_interval: "settingPollInterval",
     db_reload_interval: "settingReloadInterval",
     filename_display_length: "settingFilenameDisplayLength",
+    upload_timeout: "settingUploadTimeout",
     telegram_chat_id: "settingTelegramChatId",
     language: "settingLanguage",
     theme: "settingTheme",
@@ -114,6 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const integerFields = {
     live_wall_printer_columns: { min: 1, max: 5 },
     filename_display_length: { min: 10, max: 120 },
+    upload_timeout: { min: 10, max: 600 },
   };
   const numericBounds = {
     live_wall_plug_poll_interval: { min: 1, max: 300 },
@@ -202,6 +204,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (fieldId === "settingFilenameDisplayLength" && (value === null || value === undefined || value === "")) {
       field.value = "32";
+      return;
+    }
+    if (fieldId === "settingUploadTimeout" && (value === null || value === undefined || value === "")) {
+      field.value = "120";
       return;
     }
     field.value = value ?? "";

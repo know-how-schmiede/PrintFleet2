@@ -20,6 +20,8 @@ def ensure_settings_schema(session: Session) -> None:
         missing["live_wall_plug_poll_interval"] = "REAL"
     if "filename_display_length" not in columns:
         missing["filename_display_length"] = "INTEGER"
+    if "upload_timeout" not in columns:
+        missing["upload_timeout"] = "INTEGER"
     if "kiosk_stream_active_1" not in columns:
         missing["kiosk_stream_active_1"] = "INTEGER DEFAULT 1"
     if "kiosk_stream_active_2" not in columns:
@@ -46,6 +48,8 @@ def ensure_settings_schema(session: Session) -> None:
                 conn.execute(text("UPDATE settings SET live_wall_plug_poll_interval = 5.0"))
             if "filename_display_length" in missing:
                 conn.execute(text("UPDATE settings SET filename_display_length = 32"))
+            if "upload_timeout" in missing:
+                conn.execute(text("UPDATE settings SET upload_timeout = 120"))
             for active_column in (
                 "kiosk_stream_active_1",
                 "kiosk_stream_active_2",
@@ -105,6 +109,20 @@ def normalize_filename_display_length(value: object | None) -> int:
     return parsed
 
 
+def normalize_upload_timeout(value: object | None) -> int:
+    if value is None:
+        return 120
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return 120
+    if parsed < 10:
+        return 10
+    if parsed > 600:
+        return 600
+    return parsed
+
+
 def normalize_stream_active(value: object | None, default: bool = False) -> bool:
     if value is None:
         return default
@@ -124,6 +142,7 @@ def ensure_settings_row(session: Session) -> Settings:
             poll_interval=5.0,
             db_reload_interval=30.0,
             filename_display_length=32,
+            upload_timeout=120,
             language="en",
             theme="lightTheme",
             kiosk_stream_layout="standard",
@@ -145,6 +164,7 @@ def settings_to_dict(settings: Settings) -> dict:
         "poll_interval": settings.poll_interval,
         "db_reload_interval": settings.db_reload_interval,
         "filename_display_length": settings.filename_display_length,
+        "upload_timeout": settings.upload_timeout,
         "telegram_chat_id": settings.telegram_chat_id,
         "language": settings.language,
         "theme": settings.theme,
@@ -190,6 +210,7 @@ def update_settings(settings: Settings, data: dict) -> Settings:
         "poll_interval",
         "db_reload_interval",
         "filename_display_length",
+        "upload_timeout",
         "telegram_chat_id",
         "language",
         "theme",
@@ -244,6 +265,8 @@ def update_settings(settings: Settings, data: dict) -> Settings:
         )
     if "filename_display_length" in data:
         settings.filename_display_length = normalize_filename_display_length(settings.filename_display_length)
+    if "upload_timeout" in data:
+        settings.upload_timeout = normalize_upload_timeout(settings.upload_timeout)
     for field in (
         "kiosk_stream_active_1",
         "kiosk_stream_active_2",

@@ -1040,9 +1040,10 @@ def upload_print(printer_id: int):
                     "error": (
                         "WARNING: Filename does not contain the required g-Code prefix "
                         f"\"{prefix}\". Upload aborted."
-                    )
+                      )
                 }, 400
-        ok, message = upload_and_print(printer, filename, content)
+        settings = ensure_settings_row(session)
+        ok, message = upload_and_print(printer, filename, content, settings.upload_timeout)
         if ok:
             printer.print_check_status = "check"
     if ok:
