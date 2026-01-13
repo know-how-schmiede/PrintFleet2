@@ -4,6 +4,8 @@
 
 - fix: Fehlermeldung bei Datei-Upload
 - UPLOAD_TIMEOUT in Settings / General
+- Check/Clear Status wird automatisch auf Check bei Start Durck gesetzt
+- Printtime Today und Total in Live Snapshot
 
 ## 0.7.4 - 2026-1-12
 

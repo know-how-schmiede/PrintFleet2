@@ -15,6 +15,7 @@ from printfleet2.services.printer_service import (
     printer_to_dict,
     printers_to_dict,
     update_printer,
+    update_print_time_totals,
 )
 from printfleet2.services.printer_group_service import (
     create_printer_group,
@@ -836,6 +837,8 @@ def live_wall_status():
         name_map = {printer.id: printer.name for printer in enabled_printers}
     status_map = collect_printer_statuses(snapshots, include_plug=False)
     items = []
+    total_print_time_today_seconds = 0.0
+    total_print_time_total_seconds = 0.0
     for printer in snapshots:
         status = status_map.get(
             printer.id,
@@ -870,7 +873,26 @@ def live_wall_status():
                 "error_message": status.get("error_message"),
             }
         )
-    return {"items": items, "total_printers": total_printers}
+    if snapshots:
+        with session_scope() as session:
+            printer_ids = [printer.id for printer in snapshots]
+            printers = session.query(Printer).filter(Printer.id.in_(printer_ids)).all()
+            total_print_time_today_seconds, total_print_time_total_seconds = update_print_time_totals(
+                printers,
+                status_map,
+            )
+            for printer in printers:
+                status = status_map.get(printer.id, {})
+                label = status.get("label")
+                if isinstance(label, str) and "printing" in label.lower():
+                    if (printer.print_check_status or "").strip().lower() != "check":
+                        printer.print_check_status = "check"
+    return {
+        "items": items,
+        "total_printers": total_printers,
+        "total_print_time_today_seconds": total_print_time_today_seconds,
+        "total_print_time_total_seconds": total_print_time_total_seconds,
+    }
 
 
 @bp.get("/api/live-wall/plug-status")

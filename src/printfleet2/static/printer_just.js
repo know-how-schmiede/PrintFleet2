@@ -105,6 +105,25 @@ document.addEventListener("DOMContentLoaded", () => {
     return value.toLocaleString("de-DE", options);
   }
 
+  function sumPrintTime(printers, key) {
+    if (!Array.isArray(printers)) {
+      return NaN;
+    }
+    let total = 0;
+    let count = 0;
+    printers.forEach((printer) => {
+      if (!printer) {
+        return;
+      }
+      const value = Number(printer[key]);
+      if (Number.isFinite(value)) {
+        total += value;
+        count += 1;
+      }
+    });
+    return count ? total : NaN;
+  }
+
   function formatTemp(value) {
     if (value === null || value === undefined || value === "") {
       return "--";
@@ -853,6 +872,27 @@ document.addEventListener("DOMContentLoaded", () => {
     if (totalEnergyToday) {
       totalEnergyToday.textContent = energyCount
         ? formatMetricValue(totalEnergyWh / 1000, { maximumFractionDigits: 2 })
+        : "--";
+    }
+
+    const statusTodaySeconds = statusData ? Number(statusData.total_print_time_today_seconds) : NaN;
+    const statusTotalSeconds = statusData ? Number(statusData.total_print_time_total_seconds) : NaN;
+    const totalTodaySeconds = Number.isFinite(statusTodaySeconds)
+      ? statusTodaySeconds
+      : sumPrintTime(printers, "print_time_today_seconds");
+    const totalAllSeconds = Number.isFinite(statusTotalSeconds)
+      ? statusTotalSeconds
+      : sumPrintTime(printers, "print_time_total_seconds");
+    const totalPrintTimeToday = document.getElementById("totalPrintTimeToday");
+    if (totalPrintTimeToday) {
+      totalPrintTimeToday.textContent = Number.isFinite(totalTodaySeconds)
+        ? formatMetricValue(totalTodaySeconds / 3600, { maximumFractionDigits: 1 })
+        : "--";
+    }
+    const totalPrintTimeTotal = document.getElementById("totalPrintTimeTotal");
+    if (totalPrintTimeTotal) {
+      totalPrintTimeTotal.textContent = Number.isFinite(totalAllSeconds)
+        ? formatMetricValue(totalAllSeconds / 3600, { maximumFractionDigits: 1 })
         : "--";
     }
   }

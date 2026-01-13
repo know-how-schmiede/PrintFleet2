@@ -25,3 +25,8 @@ class Printer(Base):
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
     group_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     print_check_status: Mapped[str | None] = mapped_column(String, nullable=True, default="clear")
+    print_time_total_seconds: Mapped[float | None] = mapped_column(Float, nullable=True, default=0.0)
+    print_time_today_seconds: Mapped[float | None] = mapped_column(Float, nullable=True, default=0.0)
+    print_time_today_date: Mapped[str | None] = mapped_column(String, nullable=True)
+    print_time_last_elapsed: Mapped[float | None] = mapped_column(Float, nullable=True)
+    print_time_last_job_name: Mapped[str | None] = mapped_column(String, nullable=True)

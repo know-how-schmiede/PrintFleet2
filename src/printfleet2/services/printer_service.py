@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Iterable
 
 from sqlalchemy import inspect, text
@@ -44,6 +45,94 @@ def _normalize_check_status(value: object, default: str = "clear") -> str:
     return default
 
 
+def _coerce_seconds(value: object | None) -> float | None:
+    if value is None:
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    if parsed < 0:
+        return None
+    return parsed
+
+
+def _normalize_job_name(value: object | None) -> str | None:
+    if value is None:
+        return None
+    name = str(value).strip()
+    return name or None
+
+
+def _is_printing_label(label: str | None) -> bool:
+    if not label:
+        return False
+    return "printing" in label.lower()
+
+
+def _is_job_active_label(label: str | None) -> bool:
+    if not label:
+        return False
+    lowered = label.lower()
+    return any(token in lowered for token in ("printing", "paused", "pausing", "resuming"))
+
+
+def update_print_time_totals(printers: Iterable[Printer], status_map: dict[int, dict]) -> tuple[float, float]:
+    today_key = date.today().isoformat()
+    total_today = 0.0
+    total_total = 0.0
+    for printer in printers:
+        if printer.print_time_today_date != today_key:
+            printer.print_time_today_date = today_key
+            printer.print_time_today_seconds = 0.0
+        status = status_map.get(printer.id)
+        _update_printer_print_time(printer, status)
+        total_today += float(printer.print_time_today_seconds or 0.0)
+        total_total += float(printer.print_time_total_seconds or 0.0)
+    return total_today, total_total
+
+
+def _update_printer_print_time(printer: Printer, status: dict | None) -> None:
+    if not status:
+        return
+    label = status.get("label") if isinstance(status, dict) else None
+    elapsed = _coerce_seconds(status.get("elapsed") if isinstance(status, dict) else None)
+    job_name = _normalize_job_name(status.get("job_name") if isinstance(status, dict) else None)
+    is_printing = _is_printing_label(label)
+    is_job_active = _is_job_active_label(label)
+
+    if elapsed is not None and is_printing:
+        last_elapsed = _coerce_seconds(printer.print_time_last_elapsed)
+        last_job_name = _normalize_job_name(printer.print_time_last_job_name)
+        delta = 0.0
+        if last_elapsed is not None:
+            if job_name and last_job_name and job_name == last_job_name and elapsed >= last_elapsed:
+                delta = elapsed - last_elapsed
+            elif not last_job_name and elapsed >= last_elapsed:
+                delta = elapsed - last_elapsed
+            else:
+                delta = elapsed
+        else:
+            delta = elapsed
+        if delta > 0:
+            printer.print_time_total_seconds = float(printer.print_time_total_seconds or 0.0) + delta
+            printer.print_time_today_seconds = float(printer.print_time_today_seconds or 0.0) + delta
+        printer.print_time_last_elapsed = elapsed
+        if job_name:
+            printer.print_time_last_job_name = job_name
+        return
+
+    if elapsed is not None and is_job_active:
+        printer.print_time_last_elapsed = elapsed
+        if job_name:
+            printer.print_time_last_job_name = job_name
+        return
+
+    if not is_job_active:
+        printer.print_time_last_elapsed = None
+        printer.print_time_last_job_name = None
+
+
 def ensure_printer_schema(session: Session) -> None:
     engine = session.get_bind()
     inspector = inspect(engine)
@@ -71,6 +160,28 @@ def ensure_printer_schema(session: Session) -> None:
                         "WHERE print_check_status IS NULL OR print_check_status = ''"
                     )
                 )
+            if "print_time_total_seconds" not in columns:
+                conn.execute(text("ALTER TABLE printers ADD COLUMN print_time_total_seconds REAL"))
+                conn.execute(
+                    text(
+                        "UPDATE printers SET print_time_total_seconds = 0 "
+                        "WHERE print_time_total_seconds IS NULL"
+                    )
+                )
+            if "print_time_today_seconds" not in columns:
+                conn.execute(text("ALTER TABLE printers ADD COLUMN print_time_today_seconds REAL"))
+                conn.execute(
+                    text(
+                        "UPDATE printers SET print_time_today_seconds = 0 "
+                        "WHERE print_time_today_seconds IS NULL"
+                    )
+                )
+            if "print_time_today_date" not in columns:
+                conn.execute(text("ALTER TABLE printers ADD COLUMN print_time_today_date TEXT"))
+            if "print_time_last_elapsed" not in columns:
+                conn.execute(text("ALTER TABLE printers ADD COLUMN print_time_last_elapsed REAL"))
+            if "print_time_last_job_name" not in columns:
+                conn.execute(text("ALTER TABLE printers ADD COLUMN print_time_last_job_name TEXT"))
     except Exception:
         return
 
@@ -105,6 +216,11 @@ def create_printer(session: Session, data: dict) -> Printer:
         enabled=_bool_value(data.get("enabled"), True),
         group_id=data.get("group_id"),
         print_check_status=_normalize_check_status(data.get("print_check_status"), "clear"),
+        print_time_total_seconds=0.0,
+        print_time_today_seconds=0.0,
+        print_time_today_date=date.today().isoformat(),
+        print_time_last_elapsed=None,
+        print_time_last_job_name=None,
     )
     session.add(printer)
     return printer
@@ -175,6 +291,9 @@ def printer_to_dict(printer: Printer) -> dict:
         "enabled": printer.enabled,
         "group_id": printer.group_id,
         "print_check_status": printer.print_check_status or "clear",
+        "print_time_total_seconds": float(printer.print_time_total_seconds or 0.0),
+        "print_time_today_seconds": float(printer.print_time_today_seconds or 0.0),
+        "print_time_today_date": printer.print_time_today_date,
     }
 
 
