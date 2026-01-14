@@ -1,3 +1,5 @@
+from datetime import date
+
 from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
@@ -109,6 +111,29 @@ def list_print_jobs(session: Session, limit: int = 200) -> list[PrintJob]:
         return session.query(PrintJob).order_by(PrintJob.id.desc()).limit(limit).all()
     except Exception:
         return []
+
+
+def count_print_jobs(session: Session) -> int:
+    ensure_print_job_schema(session)
+    columns = _get_print_job_columns(session)
+    if not columns:
+        return 0
+    try:
+        return int(session.query(PrintJob.id).count())
+    except Exception:
+        return 0
+
+
+def count_print_jobs_today(session: Session, day: str | None = None) -> int:
+    ensure_print_job_schema(session)
+    columns = _get_print_job_columns(session)
+    if not columns or "job_date" not in columns:
+        return 0
+    day_prefix = day or date.today().isoformat()
+    try:
+        return int(session.query(PrintJob.id).filter(PrintJob.job_date.like(f"{day_prefix}%")).count())
+    except Exception:
+        return 0
 
 
 def print_job_to_dict(job: PrintJob) -> dict:

@@ -21,8 +21,16 @@
           <span class="metric-value" id="printerCountEnabled">{{ snapshot.enabled_printers if snapshot else "--" }}</span>
         </div>
         <div class="metric">
-          <span class="metric-label">Active prints</span>
+          <span class="metric-label">Print jobs active</span>
           <span class="metric-value" id="activePrintsCount">{{ snapshot.active_prints if snapshot else "--" }}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Print jobs today</span>
+          <span class="metric-value" id="printJobsTodayCount">{{ snapshot.total_print_jobs_today if snapshot else "--" }}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Print jobs total</span>
+          <span class="metric-value" id="printJobsTotalCount">{{ snapshot.total_print_jobs_total if snapshot else "--" }}</span>
         </div>
         <div class="metric">
           <span class="metric-label">Active errors</span>

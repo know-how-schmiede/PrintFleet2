@@ -824,6 +824,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const activePrintsEl = document.getElementById("activePrintsCount");
     const activeErrorsEl = document.getElementById("activeErrorsCount");
+    const printJobsTodayEl = document.getElementById("printJobsTodayCount");
+    const printJobsTotalEl = document.getElementById("printJobsTotalCount");
     if (statuses.length) {
       const activePrints = statuses.filter(isPrintingStatus).length;
       const activeErrors = statuses.filter(hasErrorStatus).length;
@@ -840,6 +842,14 @@ document.addEventListener("DOMContentLoaded", () => {
       if (activeErrorsEl) {
         activeErrorsEl.textContent = "--";
       }
+    }
+    const jobsToday = statusData ? Number(statusData.total_print_jobs_today) : NaN;
+    const jobsTotal = statusData ? Number(statusData.total_print_jobs_total) : NaN;
+    if (printJobsTodayEl) {
+      printJobsTodayEl.textContent = Number.isFinite(jobsToday) ? jobsToday : "--";
+    }
+    if (printJobsTotalEl) {
+      printJobsTotalEl.textContent = Number.isFinite(jobsTotal) ? jobsTotal : "--";
     }
 
     const energyItems = energyData && Array.isArray(energyData.items) ? energyData.items : [];

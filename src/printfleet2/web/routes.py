@@ -51,6 +51,8 @@ from printfleet2.services.settings_service import (
 )
 from printfleet2.services.printer_upload_service import upload_and_print
 from printfleet2.services.print_job_service import (
+    count_print_jobs,
+    count_print_jobs_today,
     create_print_job,
     list_print_jobs,
     normalize_print_via,
@@ -559,6 +561,8 @@ def index():
         enabled_printers = [printer for printer in printers if printer.enabled]
         snapshots = build_printer_snapshots(enabled_printers)
         active_printer_names = [printer.name for printer in enabled_printers]
+        total_print_jobs_today = count_print_jobs_today(session)
+        total_print_jobs_total = count_print_jobs(session)
     status_map = collect_printer_statuses(snapshots, include_plug=False)
     active_prints = 0
     active_errors = 0
@@ -581,6 +585,8 @@ def index():
         "total_printers": len(printers),
         "active_prints": active_prints,
         "active_errors": active_errors,
+        "total_print_jobs_today": total_print_jobs_today,
+        "total_print_jobs_total": total_print_jobs_total,
     }
     return render_template(
         "index.html",
@@ -595,6 +601,8 @@ def printer_dashboard_page():
         printers = list_printers(session)
         enabled_printers = [printer for printer in printers if printer.enabled]
         snapshots = build_printer_snapshots(enabled_printers)
+        total_print_jobs_today = count_print_jobs_today(session)
+        total_print_jobs_total = count_print_jobs(session)
     status_map = collect_printer_statuses(snapshots, include_plug=False)
     active_prints = 0
     active_errors = 0
@@ -617,6 +625,8 @@ def printer_dashboard_page():
         "total_printers": len(printers),
         "active_prints": active_prints,
         "active_errors": active_errors,
+        "total_print_jobs_today": total_print_jobs_today,
+        "total_print_jobs_total": total_print_jobs_total,
     }
     return render_template(
         "printer_dashboard.html",
@@ -630,6 +640,8 @@ def printer_just_page():
         printers = list_printers(session)
         enabled_printers = [printer for printer in printers if printer.enabled]
         snapshots = build_printer_snapshots(enabled_printers)
+        total_print_jobs_today = count_print_jobs_today(session)
+        total_print_jobs_total = count_print_jobs(session)
     status_map = collect_printer_statuses(snapshots, include_plug=False)
     active_prints = 0
     active_errors = 0
@@ -653,6 +665,8 @@ def printer_just_page():
         "enabled_printers": len(enabled_printers),
         "active_prints": active_prints,
         "active_errors": active_errors,
+        "total_print_jobs_today": total_print_jobs_today,
+        "total_print_jobs_total": total_print_jobs_total,
     }
     return render_template(
         "printer_just.html",
@@ -985,6 +999,8 @@ def live_wall_status():
     items = []
     total_print_time_today_seconds = 0.0
     total_print_time_total_seconds = 0.0
+    total_print_jobs_today = 0
+    total_print_jobs_total = 0
     for printer in snapshots:
         status = status_map.get(
             printer.id,
@@ -1027,6 +1043,8 @@ def live_wall_status():
                 printers,
                 status_map,
             )
+            total_print_jobs_today = count_print_jobs_today(session)
+            total_print_jobs_total = count_print_jobs(session)
             for printer in printers:
                 status = status_map.get(printer.id, {})
                 label = status.get("label")
@@ -1034,11 +1052,17 @@ def live_wall_status():
                     if (printer.print_check_status or "").strip().lower() != "check":
                         printer.print_check_status = "check"
             _flush_pending_uploads(session, status_map, name_map)
+    else:
+        with session_scope() as session:
+            total_print_jobs_today = count_print_jobs_today(session)
+            total_print_jobs_total = count_print_jobs(session)
     return {
         "items": items,
         "total_printers": total_printers,
         "total_print_time_today_seconds": total_print_time_today_seconds,
         "total_print_time_total_seconds": total_print_time_total_seconds,
+        "total_print_jobs_today": total_print_jobs_today,
+        "total_print_jobs_total": total_print_jobs_total,
     }
 
 

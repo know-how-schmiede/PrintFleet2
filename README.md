@@ -18,7 +18,7 @@ Status: MVP in progress (users, printers, settings, Live-Wall).
 - Settings UI with Live-Wall stream configuration (collapsible stream sections)
 - Live-Wall printer layout controls (printers per row 1-5, data density: light/normal/all)
 - Printer management with active list on Live-Wall
-- Printer groups and printer type catalogs in Settings
+- Printer groups and printer type catalogs with dedicated management pages
 - Printer groups export/import as JSON for migration and backups
 - Printer import/export as JSON for migration and backups
 - Printer types export/import as JSON (includes export timestamp + app version)
@@ -30,6 +30,8 @@ Status: MVP in progress (users, printers, settings, Live-Wall).
 - "Just Printing" view for printers with Upload G-Code active
 - Upload + Print with safety checks (prefix match, pre-upload checklist, busy printer guard)
 - Printer check status badge blocks uploads until confirmed, even after restarts
+- Print job logging on uploads with print origin (JustPrinting/JustGroupPrinting/Web UI)
+- Logs page with recent print jobs
 - API docs page at `/docs` plus JSON listing at `/api/docs`
 - Versioning file and changelog in docs
 
@@ -63,6 +65,7 @@ PrintFleet2/
         __init__.py
         printer.py
         printer_group.py
+        print_job.py
         printer_type.py
         settings.py
         user.py
@@ -70,6 +73,7 @@ PrintFleet2/
         auth_service.py
         net_scan_service.py
         printer_group_service.py
+        print_job_service.py
         printer_service.py
         printer_status_service.py
         printer_upload_service.py
@@ -78,8 +82,11 @@ PrintFleet2/
         user_service.py
       static/
         live_wall.js
+        logs.js
         printer_dashboard.js
+        printer_groups.js
         printer_just.js
+        printer_types.js
         printers.js
         settings.js
         style.css
@@ -89,8 +96,11 @@ PrintFleet2/
         index.html
         live_wall.html
         login.html
+        logs.html
         printer_dashboard.html
+        printer_groups.html
         printer_just.html
+        printer_types.html
         printers.html
         settings.html
         users.html
