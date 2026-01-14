@@ -1,5 +1,13 @@
 # PrintFleet2 Versions
 
+## 0.7.7 - 2026-1-15
+
+- Settings in Unterbereiche aufgliedern
+- User in Settings / Managenemt
+- Drop-Down Menu "Management"
+- Log-Liste in Management
+- fix: doppelte Log-Einträge
+
 ## 0.7.6 - 2026-1-14
 
 - Log Print-Aufträge

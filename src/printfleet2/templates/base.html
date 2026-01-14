@@ -26,8 +26,16 @@
           {% if request.path != "/live-wall" %}
             <a href="/live-wall">Live-Wall</a>
             <a href="/printers">Printers</a>
-            <a href="/users">Users</a>
-            <a href="/settings">Settings</a>
+            <details class="nav-dropdown">
+              <summary class="nav-trigger">Management</summary>
+              <div class="nav-menu">
+                <a href="/printer-groups">Printer groups</a>
+                <a href="/printer-types">Printer types</a>
+                <a href="/users">Users</a>
+                <a href="/settings">Settings</a>
+                <a href="/logs">Logs</a>
+              </div>
+            </details>
             <a href="/login" id="authLink" class="ghost">Login</a>
           {% endif %}
         </nav>

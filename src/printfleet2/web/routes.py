@@ -1,8 +1,9 @@
 import shutil
 import subprocess
+import time
 from datetime import datetime, timezone
 
-from flask import Blueprint, g, request, session as flask_session, Response, render_template, redirect, stream_with_context, url_for
+from flask import Blueprint, request, session as flask_session, Response, render_template, redirect, stream_with_context, url_for
 
 from printfleet2.db.session import session_scope
 from printfleet2.models.printer import Printer
@@ -49,7 +50,12 @@ from printfleet2.services.settings_service import (
     update_settings,
 )
 from printfleet2.services.printer_upload_service import upload_and_print
-from printfleet2.services.print_job_service import create_print_job, normalize_print_via
+from printfleet2.services.print_job_service import (
+    create_print_job,
+    list_print_jobs,
+    normalize_print_via,
+    print_job_to_dict,
+)
 from printfleet2.services.net_scan_service import scan_local_network
 from printfleet2.services.user_service import (
     create_user,
@@ -65,6 +71,9 @@ from printfleet2.version import VERSION
 
 
 bp = Blueprint("web", __name__)
+
+_PENDING_UPLOADS: dict[int, list[dict]] = {}
+_PENDING_UPLOAD_TTL_SECONDS = 30 * 60
 
 
 def clean_text(value: object | None) -> str | None:
@@ -387,6 +396,142 @@ def clean_optional(value: object | None) -> str | None:
     else:
         value = str(value).strip()
     return value or None
+
+
+def _normalize_job_filename(value: object | None) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        cleaned = value.strip()
+    else:
+        cleaned = str(value).strip()
+    if not cleaned:
+        return None
+    for sep in ("/", "\\"):
+        if sep in cleaned:
+            cleaned = cleaned.rsplit(sep, 1)[-1]
+    return cleaned or None
+
+
+def _job_name_matches(filename: str, job_name: str | None) -> bool:
+    normalized_job = _normalize_job_filename(job_name)
+    normalized_file = _normalize_job_filename(filename)
+    if not normalized_job or not normalized_file:
+        return False
+    job_lower = normalized_job.lower()
+    file_lower = normalized_file.lower()
+    job_stem = job_lower.rsplit(".", 1)[0]
+    file_stem = file_lower.rsplit(".", 1)[0]
+    if job_lower == file_lower:
+        return True
+    if job_stem and file_stem and job_stem == file_stem:
+        return True
+    safe_name = filename.replace("\\", "_").replace("/", "_").lower()
+    if job_lower == safe_name:
+        return True
+    return job_lower.endswith(file_lower)
+
+
+def _is_active_job_label(label: str | None) -> bool:
+    if not label:
+        return False
+    lowered = str(label).lower()
+    return any(token in lowered for token in ("printing", "paused", "pausing", "resuming"))
+
+
+def _confirm_print_started(printer: Printer, filename: str, attempts: int = 5, delay: float = 1.0) -> bool:
+    for idx in range(max(1, attempts)):
+        status_map = collect_printer_statuses([printer], include_plug=False)
+        status = status_map.get(printer.id, {})
+        label = status.get("label")
+        job_name = clean_optional(status.get("job_name"))
+        if job_name:
+            if _job_name_matches(filename, job_name):
+                return True
+        elif _is_active_job_label(label):
+            return True
+        if idx < attempts - 1:
+            time.sleep(delay)
+    return False
+
+
+def _record_pending_upload(
+    printer_id: int,
+    filename: str,
+    printer_name: str,
+    username: str,
+    print_via: str,
+) -> None:
+    now = time.time()
+    _cleanup_pending_uploads(now)
+    attempts = _PENDING_UPLOADS.setdefault(printer_id, [])
+    attempts = [entry for entry in attempts if not _job_name_matches(entry["filename"], filename)]
+    attempts.append(
+        {
+            "ts": now,
+            "filename": filename,
+            "printer_name": printer_name,
+            "username": username,
+            "print_via": print_via,
+        }
+    )
+    _PENDING_UPLOADS[printer_id] = attempts
+
+
+def _cleanup_pending_uploads(now: float) -> None:
+    cutoff = now - _PENDING_UPLOAD_TTL_SECONDS
+    for printer_id in list(_PENDING_UPLOADS.keys()):
+        attempts = [entry for entry in _PENDING_UPLOADS[printer_id] if entry["ts"] >= cutoff]
+        if attempts:
+            _PENDING_UPLOADS[printer_id] = attempts
+        else:
+            _PENDING_UPLOADS.pop(printer_id, None)
+
+
+def _pop_pending_upload(printer_id: int, job_name: str | None) -> dict | None:
+    if not job_name:
+        return None
+    attempts = _PENDING_UPLOADS.get(printer_id)
+    if not attempts:
+        return None
+    for idx, attempt in enumerate(attempts):
+        if _job_name_matches(attempt["filename"], job_name):
+            return attempts.pop(idx)
+    return None
+
+
+def _discard_pending_upload(printer_id: int, filename: str) -> None:
+    attempts = _PENDING_UPLOADS.get(printer_id)
+    if not attempts:
+        return
+    attempts = [entry for entry in attempts if not _job_name_matches(entry["filename"], filename)]
+    if attempts:
+        _PENDING_UPLOADS[printer_id] = attempts
+    else:
+        _PENDING_UPLOADS.pop(printer_id, None)
+
+
+def _flush_pending_uploads(session, status_map: dict[int, dict], name_map: dict[int, str]) -> None:
+    now = time.time()
+    _cleanup_pending_uploads(now)
+    for printer_id, status in status_map.items():
+        label = status.get("label")
+        job_name = clean_optional(status.get("job_name"))
+        if not job_name and not _is_active_job_label(label):
+            continue
+        attempt = _pop_pending_upload(printer_id, job_name)
+        if not attempt:
+            continue
+        printer_name = name_map.get(printer_id) or attempt.get("printer_name") or "Unknown printer"
+        username = attempt.get("username") or "unknown"
+        print_via = attempt.get("print_via") or "unknown"
+        create_print_job(
+            session,
+            gcode_filename=attempt.get("filename") or job_name or "unknown",
+            printer_name=printer_name,
+            username=username,
+            print_via=print_via,
+        )
 
 
 def normalize_group_id(payload: dict, session) -> tuple[bool, int | None, dict | None]:
@@ -888,6 +1033,7 @@ def live_wall_status():
                 if isinstance(label, str) and "printing" in label.lower():
                     if (printer.print_check_status or "").strip().lower() != "check":
                         printer.print_check_status = "check"
+            _flush_pending_uploads(session, status_map, name_map)
     return {
         "items": items,
         "total_printers": total_printers,
@@ -942,6 +1088,13 @@ def printers_plug_energy():
 @bp.post("/api/net-scan")
 def net_scan():
     return {"items": scan_local_network(), "scanned_at": datetime.now(timezone.utc).isoformat()}
+
+
+@bp.get("/api/print-jobs")
+def get_print_jobs():
+    with session_scope() as session:
+        jobs = list_print_jobs(session)
+        return {"items": [print_job_to_dict(job) for job in jobs]}
 
 
 @bp.get("/api/printers/<int:printer_id>")
@@ -1035,6 +1188,13 @@ def upload_print(printer_id: int):
         printer = get_printer(session, printer_id)
         if printer is None:
             return {"error": "Printer not found."}, 404
+        username = None
+        user_id = flask_session.get("user_id")
+        if user_id:
+            session_user = get_user(session, int(user_id))
+            if session_user is not None:
+                username = clean_optional(session_user.username)
+        username = username or "unknown"
         type_name = clean_optional(printer.printer_type)
         if not type_name:
             return {"error": "Upload not allowed for this printer type."}, 400
@@ -1070,24 +1230,27 @@ def upload_print(printer_id: int):
                 }, 400
         settings = ensure_settings_row(session)
         ok, message = upload_and_print(printer, filename, content, settings.upload_timeout)
+        if not ok:
+            if _confirm_print_started(printer, filename):
+                ok = True
+                message = "ok"
         if ok:
             printer.print_check_status = "check"
-            username = None
-            user = getattr(g, "user", None)
-            if user is not None:
-                username = clean_optional(getattr(user, "username", None))
-            if not username:
-                user_id = flask_session.get("user_id")
-                if user_id:
-                    session_user = get_user(session, int(user_id))
-                    if session_user is not None:
-                        username = clean_optional(session_user.username)
             create_print_job(
                 session,
                 gcode_filename=filename,
                 printer_name=printer.name,
-                username=username or "unknown",
+                username=username,
                 print_via=print_via,
+            )
+            _discard_pending_upload(printer.id, filename)
+        else:
+            _record_pending_upload(
+                printer.id,
+                filename,
+                printer.name,
+                username,
+                print_via,
             )
     if ok:
         return {"status": "ok"}
@@ -1325,6 +1488,7 @@ def api_docs():
             {"method": "GET", "path": "/api/live-wall/status"},
             {"method": "GET", "path": "/api/live-wall/plug-status"},
             {"method": "GET", "path": "/api/printers/plug-energy"},
+            {"method": "GET", "path": "/api/print-jobs"},
             {"method": "GET", "path": "/api/printers"},
             {"method": "POST", "path": "/api/printers"},
             {"method": "GET", "path": "/api/printers/{id}"},
@@ -1389,6 +1553,21 @@ def live_wall_stream(stream_id: int):
 @bp.get("/printers")
 def printers_page():
     return render_template("printers.html")
+
+
+@bp.get("/printer-groups")
+def printer_groups_page():
+    return render_template("printer_groups.html")
+
+
+@bp.get("/printer-types")
+def printer_types_page():
+    return render_template("printer_types.html")
+
+
+@bp.get("/logs")
+def logs_page():
+    return render_template("logs.html")
 
 
 @bp.get("/users")

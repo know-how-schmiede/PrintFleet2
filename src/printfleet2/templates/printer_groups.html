@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}PrintFleet2 | Printer groups{% endblock %}
+
+{% block content %}
+  <section class="container docs">
+    <div class="docs-hero">
+      <p class="eyebrow">Printers</p>
+      <h1>Printer groups</h1>
+      <p class="lead">Create named groups for printers.</p>
+    </div>
+
+    <div class="card stack">
+      <h3>Printer groups</h3>
+      <p class="muted">Create named groups for printers.</p>
+      <div id="printerGroupNotice" class="notice"></div>
+      <form id="printerGroupForm" class="form-grid">
+        <input type="hidden" id="printerGroupId">
+        <label>
+          Group name
+          <input type="text" id="printerGroupName" required>
+        </label>
+        <label class="full">
+          Description
+          <textarea id="printerGroupDescription" rows="3"></textarea>
+        </label>
+        <div class="form-actions full">
+          <button class="btn primary" type="submit" id="printerGroupSubmit">Save group</button>
+          <button class="btn outline" type="button" id="printerGroupReset">Clear</button>
+          <button class="btn soft" type="button" id="printerGroupExport">Export JSON</button>
+          <button class="btn soft" type="button" id="printerGroupImport">Import JSON</button>
+          <input type="file" id="printerGroupImportFile" accept=".json,application/json" hidden>
+        </div>
+      </form>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Description</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="printerGroupTable">
+            <tr>
+              <td colspan="3" class="muted">No groups yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='printer_groups.js', v=app_version) }}" defer></script>
+{% endblock %}

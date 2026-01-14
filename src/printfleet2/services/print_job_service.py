@@ -98,3 +98,25 @@ def create_print_job(
     )
     session.add(job)
     return job
+
+
+def list_print_jobs(session: Session, limit: int = 200) -> list[PrintJob]:
+    ensure_print_job_schema(session)
+    columns = _get_print_job_columns(session)
+    if not columns:
+        return []
+    try:
+        return session.query(PrintJob).order_by(PrintJob.id.desc()).limit(limit).all()
+    except Exception:
+        return []
+
+
+def print_job_to_dict(job: PrintJob) -> dict:
+    return {
+        "id": job.id,
+        "job_date": job.job_date,
+        "gcode_filename": job.gcode_filename,
+        "printer_name": job.printer_name,
+        "username": job.username,
+        "print_via": job.print_via,
+    }
