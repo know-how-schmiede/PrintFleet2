@@ -2,7 +2,7 @@ import shutil
 import subprocess
 from datetime import datetime, timezone
 
-from flask import Blueprint, request, session as flask_session, Response, render_template, redirect, stream_with_context, url_for
+from flask import Blueprint, g, request, session as flask_session, Response, render_template, redirect, stream_with_context, url_for
 
 from printfleet2.db.session import session_scope
 from printfleet2.models.printer import Printer
@@ -49,6 +49,7 @@ from printfleet2.services.settings_service import (
     update_settings,
 )
 from printfleet2.services.printer_upload_service import upload_and_print
+from printfleet2.services.print_job_service import create_print_job, normalize_print_via
 from printfleet2.services.net_scan_service import scan_local_network
 from printfleet2.services.user_service import (
     create_user,
@@ -1027,6 +1028,9 @@ def upload_print(printer_id: int):
     if not content:
         return {"error": "Empty file."}, 400
     filename = file.filename
+    print_via = normalize_print_via(
+        request.form.get("print_via") or request.args.get("print_via") or "JustPrinting"
+    )
     with session_scope() as session:
         printer = get_printer(session, printer_id)
         if printer is None:
@@ -1068,6 +1072,23 @@ def upload_print(printer_id: int):
         ok, message = upload_and_print(printer, filename, content, settings.upload_timeout)
         if ok:
             printer.print_check_status = "check"
+            username = None
+            user = getattr(g, "user", None)
+            if user is not None:
+                username = clean_optional(getattr(user, "username", None))
+            if not username:
+                user_id = flask_session.get("user_id")
+                if user_id:
+                    session_user = get_user(session, int(user_id))
+                    if session_user is not None:
+                        username = clean_optional(session_user.username)
+            create_print_job(
+                session,
+                gcode_filename=filename,
+                printer_name=printer.name,
+                username=username or "unknown",
+                print_via=print_via,
+            )
     if ok:
         return {"status": "ok"}
     error_map = {

@@ -1,5 +1,11 @@
 # PrintFleet2 Versions
 
+## 0.7.6 - 2026-1-14
+
+- Log Print-Aufträge
+- Erweiterung Log-Print um PrintVia
+
+
 ## 0.7.5 - 2026-1-13
 
 - fix: Fehlermeldung bei Datei-Upload
