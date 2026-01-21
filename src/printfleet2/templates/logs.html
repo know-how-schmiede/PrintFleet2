@@ -14,6 +14,27 @@
       <div class="table-header">
         <h3>Print jobs</h3>
         <div class="table-actions">
+          <div class="log-filters">
+            <label class="log-filter">
+              Date range
+              <select id="logRange">
+                <option value="">Custom</option>
+                <option value="current-week">Current week</option>
+                <option value="current-month">Current month</option>
+                <option value="current-year">Current year</option>
+                <option value="last-28-days">Last 28 days</option>
+              </select>
+            </label>
+            <label class="log-filter">
+              Start date
+              <input type="date" id="logStartDate" />
+            </label>
+            <label class="log-filter">
+              End date
+              <input type="date" id="logEndDate" />
+            </label>
+            <button class="btn small" id="logClear" type="button">Clear</button>
+          </div>
           <button class="btn soft" id="logRefresh" type="button">Refresh</button>
         </div>
       </div>

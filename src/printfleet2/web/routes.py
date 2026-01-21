@@ -1,7 +1,7 @@
 import shutil
 import subprocess
 import time
-from datetime import datetime, timezone
+from datetime import datetime, date, timezone
 
 from flask import Blueprint, request, session as flask_session, Response, render_template, redirect, stream_with_context, url_for
 
@@ -398,6 +398,15 @@ def clean_optional(value: object | None) -> str | None:
     else:
         value = str(value).strip()
     return value or None
+
+
+def parse_iso_date(value: str | None) -> date | None:
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
 
 
 def _normalize_job_filename(value: object | None) -> str | None:
@@ -1116,8 +1125,16 @@ def net_scan():
 
 @bp.get("/api/print-jobs")
 def get_print_jobs():
+    start_value = clean_optional(request.args.get("start_date"))
+    end_value = clean_optional(request.args.get("end_date"))
+    start_date = parse_iso_date(start_value) if start_value else None
+    end_date = parse_iso_date(end_value) if end_value else None
+    if (start_value and start_date is None) or (end_value and end_date is None):
+        return {"error": "invalid_date"}, 400
+    if start_date and end_date and start_date > end_date:
+        return {"error": "invalid_date_range"}, 400
     with session_scope() as session:
-        jobs = list_print_jobs(session)
+        jobs = list_print_jobs(session, start_date=start_date, end_date=end_date)
         return {"items": [print_job_to_dict(job) for job in jobs]}
 
 

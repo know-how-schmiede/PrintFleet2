@@ -362,6 +362,15 @@ document.addEventListener("DOMContentLoaded", () => {
     return Math.round(value).toLocaleString("de-DE");
   }
 
+  function formatPrintHours(seconds) {
+    const totalSeconds = Number(seconds);
+    if (!Number.isFinite(totalSeconds) || totalSeconds < 0) {
+      return "";
+    }
+    const hours = totalSeconds / 3600;
+    return `${hours.toFixed(1)} h`;
+  }
+
   function ensureTasmotaTooltip() {
     if (tasmotaTooltip) {
       return;
@@ -810,6 +819,10 @@ document.addEventListener("DOMContentLoaded", () => {
       loadPrinterTypes(printer.printer_type || "");
     }
     document.getElementById("printerNotes").value = printer.notes || "";
+    const printHoursField = document.getElementById("printerPrintHours");
+    if (printHoursField) {
+      printHoursField.value = formatPrintHours(printer.print_time_total_seconds);
+    }
     document.getElementById("printerToken").value = printer.token || "";
     document.getElementById("printerApiKey").value = printer.api_key || "";
     document.getElementById("printerTasmotaHost").value = printer.tasmota_host || "";
@@ -839,6 +852,10 @@ document.addEventListener("DOMContentLoaded", () => {
       loadPrinterTypes("");
     }
     document.getElementById("printerNotes").value = "";
+    const printHoursField = document.getElementById("printerPrintHours");
+    if (printHoursField) {
+      printHoursField.value = "";
+    }
     document.getElementById("printerToken").value = "";
     document.getElementById("printerApiKey").value = "";
     document.getElementById("printerTasmotaHost").value = "";

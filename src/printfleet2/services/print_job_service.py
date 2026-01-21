@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
@@ -102,13 +102,34 @@ def create_print_job(
     return job
 
 
-def list_print_jobs(session: Session, limit: int = 200) -> list[PrintJob]:
+def _apply_date_filters(query, start_date: date | None, end_date: date | None):
+    if start_date:
+        start_value = datetime.combine(start_date, datetime.min.time()).isoformat(sep=" ")
+        query = query.filter(PrintJob.job_date >= start_value)
+    if end_date:
+        next_day = end_date + timedelta(days=1)
+        end_value = datetime.combine(next_day, datetime.min.time()).isoformat(sep=" ")
+        query = query.filter(PrintJob.job_date < end_value)
+    return query
+
+
+def list_print_jobs(
+    session: Session,
+    limit: int = 200,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> list[PrintJob]:
     ensure_print_job_schema(session)
     columns = _get_print_job_columns(session)
     if not columns:
         return []
+    if (start_date or end_date) and "job_date" not in columns:
+        return []
     try:
-        return session.query(PrintJob).order_by(PrintJob.id.desc()).limit(limit).all()
+        query = session.query(PrintJob)
+        if start_date or end_date:
+            query = _apply_date_filters(query, start_date, end_date)
+        return query.order_by(PrintJob.id.desc()).limit(limit).all()
     except Exception:
         return []
 

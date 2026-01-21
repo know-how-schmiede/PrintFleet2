@@ -1,5 +1,11 @@
 # PrintFleet2 Versions
 
+## 0.7.9 - 2026-1-21
+ 
+ - Auswahl Zeitraum Logs Print jobs
+ - Anzeige Print hours in Printer foram auf Tab Notes
+ - Menü Printers in Management
+
 ## 0.7.8 - 2026-1-14
 
 - Print Jobs today und Print Jobs total

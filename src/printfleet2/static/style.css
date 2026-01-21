@@ -555,6 +555,18 @@ label.checkbox input {
   flex-wrap: wrap;
 }
 
+.log-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.log-filter select,
+.log-filter input {
+  min-width: 160px;
+}
+
 .sort-button {
   background: none;
   border: 0;
