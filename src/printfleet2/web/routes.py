@@ -683,6 +683,46 @@ def printer_just_page():
     )
 
 
+@bp.get("/printer-group-just")
+def printer_group_just_page():
+    with session_scope() as session:
+        printers = list_printers(session)
+        enabled_printers = [printer for printer in printers if printer.enabled]
+        snapshots = build_printer_snapshots(enabled_printers)
+        total_print_jobs_today = count_print_jobs_today(session)
+        total_print_jobs_total = count_print_jobs(session)
+    status_map = collect_printer_statuses(snapshots, include_plug=False)
+    active_prints = 0
+    active_errors = 0
+    for printer in snapshots:
+        status = status_map.get(
+            printer.id,
+            {
+                "label": "Unknown",
+                "state": "muted",
+                "error_message": None,
+            },
+        )
+        label = status.get("label")
+        if isinstance(label, str) and "printing" in label.lower():
+            active_prints += 1
+        error_message = status.get("error_message")
+        if status.get("state") == "error" or (isinstance(error_message, str) and error_message.strip()):
+            active_errors += 1
+    snapshot = {
+        "total_printers": len(printers),
+        "enabled_printers": len(enabled_printers),
+        "active_prints": active_prints,
+        "active_errors": active_errors,
+        "total_print_jobs_today": total_print_jobs_today,
+        "total_print_jobs_total": total_print_jobs_total,
+    }
+    return render_template(
+        "printer_group_just.html",
+        snapshot=snapshot,
+    )
+
+
 @bp.get("/api/settings")
 def get_settings():
     with session_scope() as session:

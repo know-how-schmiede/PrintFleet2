@@ -1,5 +1,10 @@
 # PrintFleet2 Versions
 
+## 0.8.0 - 2026-1-22
+
+- Just Group Print
+- Just Group Print Button auf Home
+
 ## 0.7.9 - 2026-1-21
  
  - Auswahl Zeitraum Logs Print jobs
@@ -22,7 +27,6 @@
 
 - Log Print-Aufträge
 - Erweiterung Log-Print um PrintVia
-
 
 ## 0.7.5 - 2026-1-13
 

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}PrintFleet2 | Just Group Print{% endblock %}
+
+{% block content %}
+  <section class="hero">
+    <div class="container hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">PrintFleet2</p>
+        <h1>Just Group Print</h1>
+        <p class="lead">Printer groups ready for G-Code upload.<br> <span aria-hidden="true">(!)</span> G-Code for a different printer model can cause serious damage and must be verified multiple times.</p>
+      </div>
+      <div class="hero-card reveal" style="animation-delay: 0.1s">
+        <h3>Live snapshot</h3>
+        <div class="metric">
+          <span class="metric-label">Printers all</span>
+          <span class="metric-value" id="printerCountAll">{{ snapshot.total_printers if snapshot else "--" }}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Printers enabled</span>
+          <span class="metric-value" id="printerCountEnabled">{{ snapshot.enabled_printers if snapshot else "--" }}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Print jobs active</span>
+          <span class="metric-value" id="activePrintsCount">{{ snapshot.active_prints if snapshot else "--" }}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Print jobs today</span>
+          <span class="metric-value" id="printJobsTodayCount">{{ snapshot.total_print_jobs_today if snapshot else "--" }}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Print jobs total</span>
+          <span class="metric-value" id="printJobsTotalCount">{{ snapshot.total_print_jobs_total if snapshot else "--" }}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Active errors</span>
+          <span class="metric-value" id="activeErrorsCount">{{ snapshot.active_errors if snapshot else "--" }}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Power (W)</span>
+          <span class="metric-value" id="totalPowerNow">--</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Today (kWh)</span>
+          <span class="metric-value" id="totalEnergyToday">--</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Print time today (h)</span>
+          <span class="metric-value" id="totalPrintTimeToday">--</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Print time total (h)</span>
+          <span class="metric-value" id="totalPrintTimeTotal">--</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="container">
+    <article class="card reveal" style="animation-delay: 0.2s">
+      <div class="table-header">
+        <div>
+          <h3>Just group printing</h3>
+          <p class="muted">Printer groups with Upload G-Code active.</p>
+        </div>
+      </div>
+      <div id="printerGroupJustNotice" class="notice"></div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th><button class="sort-button" type="button" data-sort="name"><span>Name</span><span class="sort-icon" aria-hidden="true"></span></button></th>
+              <th><button class="sort-button" type="button" data-sort="job"><span>Job</span><span class="sort-icon" aria-hidden="true"></span></button></th>
+              <th><button class="sort-button" type="button" data-sort="elapsed"><span>Elapsed</span><span class="sort-icon" aria-hidden="true"></span></button></th>
+              <th><button class="sort-button" type="button" data-sort="remaining"><span>Remaining</span><span class="sort-icon" aria-hidden="true"></span></button></th>
+              <th>Links</th>
+            </tr>
+          </thead>
+          <tbody id="printerGroupJustTable">
+            <tr>
+              <td colspan="5" class="muted">No groups loaded yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </article>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='printer_group_just.js') }}" defer></script>
+{% endblock %}
