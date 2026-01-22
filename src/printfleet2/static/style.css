@@ -876,6 +876,11 @@ label.checkbox input {
   color: #b45309;
 }
 
+.printer-status.status-printing {
+  background: rgba(59, 130, 246, 0.16);
+  color: #1d4ed8;
+}
+
 .printer-status.status-error,
 .plug-status.status-error {
   background: rgba(239, 68, 68, 0.14);

@@ -949,7 +949,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (entry.anyPrinting) {
       const printingBadge = document.createElement("span");
-      printingBadge.className = "printer-status status-warn";
+      printingBadge.className = "printer-status status-printing";
       printingBadge.textContent = "Printing";
       nameWrap.appendChild(printingBadge);
     }

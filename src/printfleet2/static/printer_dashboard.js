@@ -229,7 +229,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const badge = document.createElement("span");
     const state = status && status.status_state ? status.status_state : "muted";
     const label = status && status.status ? status.status : "Unknown";
-    badge.className = `printer-status status-${state}`;
+    const className = getStatusClass(state, status);
+    badge.className = `printer-status status-${className}`;
     badge.textContent = label;
     td.appendChild(badge);
     return td;
@@ -294,6 +295,13 @@ document.addEventListener("DOMContentLoaded", () => {
       return false;
     }
     return status.status.toLowerCase().includes("printing");
+  }
+
+  function getStatusClass(state, status) {
+    if (isPrintingStatus(status)) {
+      return "printing";
+    }
+    return state || "muted";
   }
 
   function hasErrorStatus(status) {

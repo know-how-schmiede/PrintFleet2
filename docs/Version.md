@@ -5,6 +5,8 @@
 - Statusmeldungen Just Group Printing
 - Prüfung g-Code Praefix bei Just Group Print
 - Funktionalität Check Group (Button und Überprüfung vor Druck)
+- Button "Upload + Print" ausblenden wenn bei Just Printing gerade gedruckt wird
+- Badges einheitliche Färbung
 
 ## 0.8.1 - 2026-1-22
 

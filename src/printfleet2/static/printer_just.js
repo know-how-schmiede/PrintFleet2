@@ -350,7 +350,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const badge = document.createElement("span");
     const state = status && status.status_state ? status.status_state : "muted";
     const label = status && status.status ? status.status : "Unknown";
-    badge.className = `printer-status status-${state}`;
+    const className = getStatusClass(state, status);
+    badge.className = `printer-status status-${className}`;
     badge.textContent = label;
     td.appendChild(badge);
     return td;
@@ -459,63 +460,69 @@ document.addEventListener("DOMContentLoaded", () => {
     const td = document.createElement("td");
     const stack = document.createElement("div");
     stack.className = "stack";
-    const uploadButton = document.createElement("button");
-    uploadButton.className = "btn primary small";
-    uploadButton.type = "button";
-    uploadButton.textContent = "Upload + Print";
-    const uploadInput = document.createElement("input");
-    uploadInput.type = "file";
-    uploadInput.accept = ".gcode,.gco,.gc,.g,.bgcode";
-    uploadInput.hidden = true;
-    if (!supportsUpload(printer)) {
-      uploadButton.disabled = true;
-      uploadButton.title = "Unsupported backend";
+    const isPrinting = isPrintingStatus(status);
+    let uploadInput = null;
+    if (!isPrinting) {
+      const uploadButton = document.createElement("button");
+      uploadButton.className = "btn primary small";
+      uploadButton.type = "button";
+      uploadButton.textContent = "Upload + Print";
+      uploadInput = document.createElement("input");
+      uploadInput.type = "file";
+      uploadInput.accept = ".gcode,.gco,.gc,.g,.bgcode";
+      uploadInput.hidden = true;
+      if (!supportsUpload(printer)) {
+        uploadButton.disabled = true;
+        uploadButton.title = "Unsupported backend";
+      }
+      uploadButton.addEventListener("click", () => {
+        if (uploadButton.disabled) {
+          return;
+        }
+        if (isPrintingStatus(status)) {
+          alertPrinterBusy(printer, status && status.job_name);
+          return;
+        }
+        if (normalizePrintCheckStatus(printer && printer.print_check_status) !== "clear") {
+          confirmAndClearPrinterCheck(printer);
+          return;
+        }
+        uploadInput.click();
+      });
+      uploadInput.addEventListener("change", async () => {
+        const file = uploadInput.files && uploadInput.files[0];
+        uploadInput.value = "";
+        if (!file) {
+          return;
+        }
+        if (isPrintingStatus(status)) {
+          alertPrinterBusy(printer, status && status.job_name);
+          return;
+        }
+        if (normalizePrintCheckStatus(printer && printer.print_check_status) !== "clear") {
+          await confirmAndClearPrinterCheck(printer);
+          return;
+        }
+        const confirmed = window.confirm(
+          "Please confirm before upload:\n" +
+            "- The print bed is clear.\n" +
+            "- The correct filament is loaded.\n" +
+            "- The G-Code file matches this printer model.\n\n" +
+            "Continue with upload and print?"
+        );
+        if (!confirmed) {
+          return;
+        }
+        await uploadAndPrint(printer, file, uploadButton);
+      });
+      stack.appendChild(uploadButton);
     }
-    uploadButton.addEventListener("click", () => {
-      if (uploadButton.disabled) {
-        return;
-      }
-      if (isPrintingStatus(status)) {
-        alertPrinterBusy(printer, status && status.job_name);
-        return;
-      }
-      if (normalizePrintCheckStatus(printer && printer.print_check_status) !== "clear") {
-        confirmAndClearPrinterCheck(printer);
-        return;
-      }
-      uploadInput.click();
-    });
-    uploadInput.addEventListener("change", async () => {
-      const file = uploadInput.files && uploadInput.files[0];
-      uploadInput.value = "";
-      if (!file) {
-        return;
-      }
-      if (isPrintingStatus(status)) {
-        alertPrinterBusy(printer, status && status.job_name);
-        return;
-      }
-      if (normalizePrintCheckStatus(printer && printer.print_check_status) !== "clear") {
-        await confirmAndClearPrinterCheck(printer);
-        return;
-      }
-      const confirmed = window.confirm(
-        "Please confirm before upload:\n" +
-          "- The print bed is clear.\n" +
-          "- The correct filament is loaded.\n" +
-          "- The G-Code file matches this printer model.\n\n" +
-          "Continue with upload and print?"
-      );
-      if (!confirmed) {
-        return;
-      }
-      await uploadAndPrint(printer, file, uploadButton);
-    });
-    stack.appendChild(uploadButton);
     stack.appendChild(createActionButton("Web UI", buildWebUiUrl(printer)));
     stack.appendChild(createActionButton("Tasmota", buildTasmotaUrl(printer)));
     td.appendChild(stack);
-    td.appendChild(uploadInput);
+    if (uploadInput) {
+      td.appendChild(uploadInput);
+    }
     return td;
   }
 
@@ -524,6 +531,13 @@ document.addEventListener("DOMContentLoaded", () => {
       return false;
     }
     return status.status.toLowerCase().includes("printing");
+  }
+
+  function getStatusClass(state, status) {
+    if (isPrintingStatus(status)) {
+      return "printing";
+    }
+    return state || "muted";
   }
 
   function hasErrorStatus(status) {

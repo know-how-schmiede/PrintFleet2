@@ -58,11 +58,25 @@ document.addEventListener("DOMContentLoaded", () => {
     return `${secs}s`;
   }
 
+  function isPrintingStatus(status) {
+    if (!status || typeof status.status !== "string") {
+      return false;
+    }
+    return status.status.toLowerCase().includes("printing");
+  }
+
+  function getStatusClass(status) {
+    if (isPrintingStatus(status)) {
+      return "printing";
+    }
+    return status.status_state || "muted";
+  }
+
   function updateCard(card, status) {
     const statusEl = card.querySelector("[data-printer-status]");
     if (statusEl) {
       statusEl.textContent = status.status || "Unknown";
-      statusEl.className = "printer-status status-" + (status.status_state || "muted");
+      statusEl.className = "printer-status status-" + getStatusClass(status);
     }
 
 
