@@ -11,3 +11,4 @@ class PrinterGroup(Base):
     name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     printer_type: Mapped[str | None] = mapped_column(String, nullable=True)
+    print_check_status: Mapped[str | None] = mapped_column(String, nullable=True, default="clear")

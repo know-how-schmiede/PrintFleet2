@@ -1,5 +1,11 @@
 # PrintFleet2 Versions
 
+## 0.8.2 - 2026-1-22
+
+- Statusmeldungen Just Group Printing
+- Prüfung g-Code Praefix bei Just Group Print
+- Funktionalität Check Group (Button und Überprüfung vor Druck)
+
 ## 0.8.1 - 2026-1-22
 
 - Anzahl Printer in Gruppe bei Just Group Print

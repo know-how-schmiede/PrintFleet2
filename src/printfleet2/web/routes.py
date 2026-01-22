@@ -1,3 +1,4 @@
+import os
 import shutil
 import subprocess
 import time
@@ -7,6 +8,7 @@ from flask import Blueprint, request, session as flask_session, Response, render
 
 from printfleet2.db.session import session_scope
 from printfleet2.models.printer import Printer
+from printfleet2.models.printer_group import PrinterGroup
 from printfleet2.services.printer_service import (
     create_printer,
     delete_printer,
@@ -23,6 +25,7 @@ from printfleet2.services.printer_group_service import (
     get_printer_group,
     get_printer_group_by_name,
     list_printer_groups,
+    normalize_group_check_status,
     normalize_group_name,
     printer_group_to_dict,
 )
@@ -799,15 +802,22 @@ def import_printer_groups():
             seen_names.add(name_key)
             description = clean_optional(raw.get("description")) if "description" in raw else None
             printer_type = clean_optional(raw.get("printer_type")) if "printer_type" in raw else None
+            check_status = (
+                normalize_group_check_status(raw.get("print_check_status"), "clear")
+                if "print_check_status" in raw
+                else None
+            )
             existing = get_printer_group_by_name(session, name)
             if existing is None:
-                create_printer_group(session, name, description, printer_type)
+                create_printer_group(session, name, description, printer_type, check_status)
                 created += 1
             else:
                 if "description" in raw:
                     existing.description = description
                 if "printer_type" in raw:
                     existing.printer_type = printer_type
+                if "print_check_status" in raw:
+                    existing.print_check_status = check_status
                 updated += 1
     return {"created": created, "updated": updated, "skipped": skipped, "invalid": invalid}
 
@@ -822,11 +832,16 @@ def post_printer_group():
         return {"error": "missing_name"}, 400
     description = clean_optional(payload.get("description"))
     printer_type = clean_optional(payload.get("printer_type"))
+    check_status = (
+        normalize_group_check_status(payload.get("print_check_status"), "clear")
+        if "print_check_status" in payload
+        else None
+    )
     with session_scope() as session:
         existing = get_printer_group_by_name(session, name)
         if existing is not None:
             return {"error": "name_exists"}, 409
-        group = create_printer_group(session, name, description, printer_type)
+        group = create_printer_group(session, name, description, printer_type, check_status)
         return printer_group_to_dict(group), 201
 
 
@@ -852,6 +867,11 @@ def put_printer_group(group_id: int):
             group.description = clean_optional(payload.get("description"))
         if "printer_type" in payload:
             group.printer_type = clean_optional(payload.get("printer_type"))
+        if "print_check_status" in payload:
+            group.print_check_status = normalize_group_check_status(
+                payload.get("print_check_status"),
+                group.print_check_status or "clear",
+            )
         return printer_group_to_dict(group)
 
 
@@ -1100,12 +1120,24 @@ def live_wall_status():
             )
             total_print_jobs_today = count_print_jobs_today(session)
             total_print_jobs_total = count_print_jobs(session)
+            group_ids_to_check: set[int] = set()
             for printer in printers:
                 status = status_map.get(printer.id, {})
                 label = status.get("label")
                 if isinstance(label, str) and "printing" in label.lower():
                     if (printer.print_check_status or "").strip().lower() != "check":
                         printer.print_check_status = "check"
+                    if printer.group_id:
+                        group_ids_to_check.add(int(printer.group_id))
+            if group_ids_to_check:
+                groups = (
+                    session.query(PrinterGroup)
+                    .filter(PrinterGroup.id.in_(group_ids_to_check))
+                    .all()
+                )
+                for group in groups:
+                    if (group.print_check_status or "").strip().lower() != "check":
+                        group.print_check_status = "check"
             _flush_pending_uploads(session, status_map, name_map)
     else:
         with session_scope() as session:
@@ -1306,14 +1338,15 @@ def upload_print(printer_id: int):
             }, 409
         prefix = clean_optional(getattr(printer_type, "gcode_prefix", None))
         if prefix:
-            filename_lower = filename.lower()
+            safe_name = os.path.basename(filename)
+            filename_lower = safe_name.lower()
             prefix_lower = prefix.lower()
-            if prefix_lower not in filename_lower:
+            if not filename_lower.startswith(prefix_lower):
                 return {
                     "error": (
-                        "WARNING: Filename does not contain the required g-Code prefix "
+                        "WARNING: Filename does not start with the required g-Code prefix "
                         f"\"{prefix}\". Upload aborted."
-                      )
+                    )
                 }, 400
         settings = ensure_settings_row(session)
         ok, message = upload_and_print(printer, filename, content, settings.upload_timeout)
@@ -1323,6 +1356,10 @@ def upload_print(printer_id: int):
                 message = "ok"
         if ok:
             printer.print_check_status = "check"
+            if printer.group_id:
+                group = get_printer_group(session, int(printer.group_id))
+                if group is not None:
+                    group.print_check_status = "check"
             create_print_job(
                 session,
                 gcode_filename=filename,

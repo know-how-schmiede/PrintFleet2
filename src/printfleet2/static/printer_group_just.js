@@ -192,7 +192,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (typeof value === "string") {
       const cleaned = value.trim().toLowerCase().replace(/\s+/g, "").replace(/_/g, "");
-      if (cleaned === "check" || cleaned === "checkprinter") {
+      if (cleaned === "check" || cleaned === "checkprinter" || cleaned === "checkgroup") {
         return "check";
       }
       if (cleaned === "clear" || cleaned === "ok" || cleaned === "ready") {
@@ -271,7 +271,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return 0;
   }
 
-  function buildGroupMap(groups) {
+  function buildGroupMetaMap(groups) {
     const map = new Map();
     if (!Array.isArray(groups)) {
       return map;
@@ -282,9 +282,10 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
       const name = typeof group.name === "string" ? group.name.trim() : "";
-      if (name) {
-        map.set(id, name);
-      }
+      map.set(id, {
+        name,
+        print_check_status: normalizePrintCheckStatus(group && group.print_check_status),
+      });
     });
     return map;
   }
@@ -415,17 +416,43 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  function buildGroupEntries(printers, statusMap, groupMap) {
+  function isOperationalStatus(status) {
+    return status && status.status_state === "ok";
+  }
+
+  function deriveGroupAvailability(printers, statusMap) {
+    if (!Array.isArray(printers) || printers.length === 0) {
+      return { allOperational: false, anyPrinting: false };
+    }
+    let allOperational = true;
+    let anyPrinting = false;
+    printers.forEach((printer) => {
+      const status = statusMap.get(Number(printer.id)) || {};
+      if (!isOperationalStatus(status)) {
+        allOperational = false;
+      }
+      if (isPrintingStatus(status)) {
+        anyPrinting = true;
+      }
+    });
+    return { allOperational, anyPrinting };
+  }
+
+  function buildGroupEntries(printers, statusMap, groupMetaMap) {
     const byId = new Map();
     printers.forEach((printer) => {
       const rawId = Number(printer && printer.group_id);
       const groupId = Number.isFinite(rawId) && rawId > 0 ? rawId : 0;
       let entry = byId.get(groupId);
       if (!entry) {
-        const groupName = groupId === 0 ? "No group" : groupMap.get(groupId) || `Group ${groupId}`;
+        const meta = groupMetaMap.get(groupId);
+        const groupName =
+          groupId === 0 ? "No group" : (meta && meta.name) || `Group ${groupId}`;
+        const printCheckStatus = meta ? meta.print_check_status : "clear";
         entry = {
           id: groupId,
           name: groupName,
+          printCheckStatus,
           printers: [],
         };
         byId.set(groupId, entry);
@@ -435,9 +462,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     return Array.from(byId.values()).map((entry) => {
       const statusMeta = deriveGroupJobStatus(entry.printers, statusMap);
+      const availabilityMeta = deriveGroupAvailability(entry.printers, statusMap);
       return {
         ...entry,
         ...statusMeta,
+        ...availabilityMeta,
         mixedTypes: hasMixedPrinterTypes(entry.printers),
       };
     });
@@ -657,6 +686,34 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  async function confirmAndClearGroupCheck(entry) {
+    const groupName = (entry && entry.name) || "Group";
+    const confirmed = window.confirm(
+      "Checklist before the next print:\n" +
+        "- Print bed is clear and clean\n" +
+        "- Correct filament is loaded\n" +
+        "- G-Code file matches the printer model\n" +
+        "- Axes and parts move freely\n\n" +
+        "Set status to Clear?"
+    );
+    if (!confirmed) {
+      return false;
+    }
+    const res = await fetch(`/api/printer-groups/${entry.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ print_check_status: "clear" }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setNotice(data.error || "Failed to update group status.", "error");
+      return false;
+    }
+    setNotice(`Group status cleared for ${groupName}.`, "success");
+    await refreshDashboard();
+    return true;
+  }
+
   function formatPrinterList(printers, limit = 4) {
     const names = printers
       .map((printer) => (printer && printer.name ? printer.name : "Unnamed printer"))
@@ -669,6 +726,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function uploadGroup(entry, file, button) {
+    const checkStatus = normalizePrintCheckStatus(entry && entry.printCheckStatus);
+    if (checkStatus !== "clear") {
+      setNotice("Group check required before upload.", "error");
+      return;
+    }
     const previousLabel = button.textContent;
     button.disabled = true;
     button.textContent = "Uploading...";
@@ -762,19 +824,33 @@ document.addEventListener("DOMContentLoaded", () => {
     const results = await Promise.all(readyPrinters.map((printer) => uploadToPrinter(printer, file)));
     let successCount = 0;
     let failureCount = 0;
+    const errorMessages = [];
     results.forEach((result) => {
       if (result.ok) {
         successCount += 1;
       } else {
         failureCount += 1;
+        if (result.error) {
+          errorMessages.push(result.error);
+        }
       }
     });
 
     if (failureCount) {
-      setNotice(
-        `Upload finished for ${entry.name}: ${successCount} ok, ${failureCount} failed.`,
-        "error"
-      );
+      const uniqueErrors = Array.from(new Set(errorMessages.map((msg) => msg.trim()).filter(Boolean)));
+      if (successCount === 0 && uniqueErrors.length === 1) {
+        setNotice(uniqueErrors[0], "error");
+      } else if (uniqueErrors.length) {
+        setNotice(
+          `Upload finished for ${entry.name}: ${successCount} ok, ${failureCount} failed. ${uniqueErrors[0]}`,
+          "error"
+        );
+      } else {
+        setNotice(
+          `Upload finished for ${entry.name}: ${successCount} ok, ${failureCount} failed.`,
+          "error"
+        );
+      }
     } else {
       setNotice(`Upload started for ${entry.name}: ${successCount} printer(s).`, "success");
     }
@@ -791,6 +867,10 @@ document.addEventListener("DOMContentLoaded", () => {
       return td;
     }
     if (entry.mixedTypes) {
+      td.innerHTML = "<span class=\"muted\">--</span>";
+      return td;
+    }
+    if (normalizePrintCheckStatus(entry.printCheckStatus) !== "clear") {
       td.innerHTML = "<span class=\"muted\">--</span>";
       return td;
     }
@@ -840,6 +920,39 @@ document.addEventListener("DOMContentLoaded", () => {
     const nameText = document.createElement("span");
     nameText.textContent = formatGroupName(entry);
     nameWrap.appendChild(nameText);
+    if (entry.id !== 0) {
+      const checkStatus = normalizePrintCheckStatus(entry.printCheckStatus);
+      const statusLine = document.createElement(checkStatus === "check" ? "button" : "span");
+      if (checkStatus === "check") {
+        statusLine.type = "button";
+        statusLine.className = "printer-status status-warn printer-check-status";
+        statusLine.textContent = "Check Group";
+        if (entry.anyPrinting) {
+          statusLine.disabled = true;
+          statusLine.title = "Printing in progress";
+        } else {
+          statusLine.addEventListener("click", () => confirmAndClearGroupCheck(entry));
+        }
+      } else {
+        statusLine.className = "printer-status printer-status-clear";
+        statusLine.textContent = "Clear";
+      }
+      nameWrap.appendChild(statusLine);
+    }
+    const availabilityBadge = document.createElement("span");
+    availabilityBadge.className = entry.allOperational
+      ? "printer-status status-ok"
+      : "printer-status status-error";
+    availabilityBadge.textContent = entry.allOperational ? "Online" : "Offline";
+    if (!entry.anyPrinting || !entry.allOperational) {
+      nameWrap.appendChild(availabilityBadge);
+    }
+    if (entry.anyPrinting) {
+      const printingBadge = document.createElement("span");
+      printingBadge.className = "printer-status status-warn";
+      printingBadge.textContent = "Printing";
+      nameWrap.appendChild(printingBadge);
+    }
     if (entry.mixedTypes) {
       const badge = document.createElement("span");
       badge.className = "printer-status status-warn";
@@ -854,8 +967,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const uploadSet = buildUploadTypeSet(types);
     const eligiblePrinters = filterPrintersForUpload(printers, uploadSet);
     const statusMap = buildStatusMap(statuses);
-    const groupMap = buildGroupMap(groups);
-    const groupEntries = buildGroupEntries(eligiblePrinters, statusMap, groupMap);
+    const groupMetaMap = buildGroupMetaMap(groups);
+    const groupEntries = buildGroupEntries(eligiblePrinters, statusMap, groupMetaMap);
     tableBody.innerHTML = "";
     if (!groupEntries.length) {
       tableBody.innerHTML =

@@ -20,17 +20,32 @@ def ensure_printer_group_schema(session: Session) -> None:
                         "id INTEGER PRIMARY KEY AUTOINCREMENT, "
                         "name VARCHAR NOT NULL UNIQUE, "
                         "description TEXT, "
-                        "printer_type TEXT)"
+                        "printer_type TEXT, "
+                        "print_check_status TEXT)"
                     )
                 )
         except Exception:
             return
     columns = _get_printer_group_columns(session)
-    if "printer_type" in columns:
+    missing = {}
+    if "printer_type" not in columns:
+        missing["printer_type"] = "TEXT"
+    if "print_check_status" not in columns:
+        missing["print_check_status"] = "TEXT"
+    if not missing:
         return
     try:
         with engine.begin() as conn:
-            conn.execute(text("ALTER TABLE printer_groups ADD COLUMN printer_type TEXT"))
+            for name, definition in missing.items():
+                conn.execute(text(f"ALTER TABLE printer_groups ADD COLUMN {name} {definition}"))
+            if "print_check_status" in missing:
+                conn.execute(
+                    text(
+                        "UPDATE printer_groups "
+                        "SET print_check_status = 'clear' "
+                        "WHERE print_check_status IS NULL OR print_check_status = ''"
+                    )
+                )
     except Exception:
         return
 
@@ -49,6 +64,20 @@ def normalize_group_name(name: str | None) -> str | None:
         return None
     value = name.strip()
     return value or None
+
+
+def normalize_group_check_status(value: object, default: str = "clear") -> str:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return "check" if value else "clear"
+    if isinstance(value, str):
+        cleaned = value.strip().lower().replace(" ", "").replace("_", "")
+        if cleaned in {"check", "checkgroup"}:
+            return "check"
+        if cleaned in {"clear", "ok", "ready"}:
+            return "clear"
+    return default
 
 
 def list_printer_groups(session: Session) -> list[PrinterGroup]:
@@ -75,9 +104,15 @@ def create_printer_group(
     name: str,
     description: str | None = None,
     printer_type: str | None = None,
+    print_check_status: str | None = None,
 ) -> PrinterGroup:
     ensure_printer_group_schema(session)
-    group = PrinterGroup(name=name, description=description, printer_type=printer_type)
+    group = PrinterGroup(
+        name=name,
+        description=description,
+        printer_type=printer_type,
+        print_check_status=normalize_group_check_status(print_check_status, "clear"),
+    )
     session.add(group)
     return group
 
@@ -88,4 +123,5 @@ def printer_group_to_dict(group: PrinterGroup) -> dict:
         "name": group.name,
         "description": group.description,
         "printer_type": group.printer_type,
+        "print_check_status": group.print_check_status or "clear",
     }
