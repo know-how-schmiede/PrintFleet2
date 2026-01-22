@@ -461,8 +461,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const stack = document.createElement("div");
     stack.className = "stack";
     const isPrinting = isPrintingStatus(status);
+    const checkStatus = normalizePrintCheckStatus(printer && printer.print_check_status);
     let uploadInput = null;
-    if (!isPrinting) {
+    if (!isPrinting && checkStatus === "clear") {
       const uploadButton = document.createElement("button");
       uploadButton.className = "btn primary small";
       uploadButton.type = "button";

@@ -7,6 +7,7 @@
 - Funktionalität Check Group (Button und Überprüfung vor Druck)
 - Button "Upload + Print" ausblenden wenn bei Just Printing gerade gedruckt wird
 - Badges einheitliche Färbung
+- Button "Upload + Print" ausblenden solange "Check printer" angezeigt wird
 
 ## 0.8.1 - 2026-1-22
 
