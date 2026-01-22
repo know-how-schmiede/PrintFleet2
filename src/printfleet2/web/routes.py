@@ -798,13 +798,16 @@ def import_printer_groups():
                 continue
             seen_names.add(name_key)
             description = clean_optional(raw.get("description")) if "description" in raw else None
+            printer_type = clean_optional(raw.get("printer_type")) if "printer_type" in raw else None
             existing = get_printer_group_by_name(session, name)
             if existing is None:
-                create_printer_group(session, name, description)
+                create_printer_group(session, name, description, printer_type)
                 created += 1
             else:
                 if "description" in raw:
                     existing.description = description
+                if "printer_type" in raw:
+                    existing.printer_type = printer_type
                 updated += 1
     return {"created": created, "updated": updated, "skipped": skipped, "invalid": invalid}
 
@@ -818,11 +821,12 @@ def post_printer_group():
     if not name:
         return {"error": "missing_name"}, 400
     description = clean_optional(payload.get("description"))
+    printer_type = clean_optional(payload.get("printer_type"))
     with session_scope() as session:
         existing = get_printer_group_by_name(session, name)
         if existing is not None:
             return {"error": "name_exists"}, 409
-        group = create_printer_group(session, name, description)
+        group = create_printer_group(session, name, description, printer_type)
         return printer_group_to_dict(group), 201
 
 
@@ -846,6 +850,8 @@ def put_printer_group(group_id: int):
             group.name = name_value
         if "description" in payload:
             group.description = clean_optional(payload.get("description"))
+        if "printer_type" in payload:
+            group.printer_type = clean_optional(payload.get("printer_type"))
         return printer_group_to_dict(group)
 
 

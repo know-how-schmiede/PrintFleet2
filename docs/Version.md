@@ -1,5 +1,13 @@
 # PrintFleet2 Versions
 
+## 0.8.1 - 2026-1-22
+
+- Anzahl Printer in Gruppe bei Just Group Print
+- kein Button Upload + Print bei "No group"-Gruppe
+- Überprüung ob in Printer-Gruppe alle den gleichen Printer-Typ besitzen
+- Printer groups erweitern um "Printer type"
+- bei Printer kann nur noch eine Printer Gruppe hinzugefügt werden, wenn Printer Typ gleich ist
+
 ## 0.8.0 - 2026-1-22
 
 - Just Group Print

@@ -10,3 +10,4 @@ class PrinterGroup(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    printer_type: Mapped[str | None] = mapped_column(String, nullable=True)

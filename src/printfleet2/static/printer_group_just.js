@@ -438,8 +438,20 @@ document.addEventListener("DOMContentLoaded", () => {
       return {
         ...entry,
         ...statusMeta,
+        mixedTypes: hasMixedPrinterTypes(entry.printers),
       };
     });
+  }
+
+  function hasMixedPrinterTypes(printers) {
+    if (!Array.isArray(printers) || printers.length <= 1) {
+      return false;
+    }
+    const typeSet = new Set();
+    printers.forEach((printer) => {
+      typeSet.add(normalizeTypeName(printer && printer.printer_type));
+    });
+    return typeSet.size > 1;
   }
 
   function sortValue(entry, key) {
@@ -774,6 +786,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function createActionsCell(entry) {
     const td = document.createElement("td");
+    if (entry.id === 0) {
+      td.innerHTML = "<span class=\"muted\">--</span>";
+      return td;
+    }
+    if (entry.mixedTypes) {
+      td.innerHTML = "<span class=\"muted\">--</span>";
+      return td;
+    }
     const stack = document.createElement("div");
     stack.className = "stack";
     const uploadButton = document.createElement("button");
@@ -808,6 +828,28 @@ document.addEventListener("DOMContentLoaded", () => {
     return td;
   }
 
+  function formatGroupName(entry) {
+    const count = Array.isArray(entry.printers) ? entry.printers.length : 0;
+    return `${entry.name} (${count}x)`;
+  }
+
+  function createNameCell(entry) {
+    const td = document.createElement("td");
+    const nameWrap = document.createElement("div");
+    nameWrap.className = "printer-badges";
+    const nameText = document.createElement("span");
+    nameText.textContent = formatGroupName(entry);
+    nameWrap.appendChild(nameText);
+    if (entry.mixedTypes) {
+      const badge = document.createElement("span");
+      badge.className = "printer-status status-warn";
+      badge.textContent = "false Printer-Type !";
+      nameWrap.appendChild(badge);
+    }
+    td.appendChild(nameWrap);
+    return td;
+  }
+
   function renderTable(printers, statuses, groups, types) {
     const uploadSet = buildUploadTypeSet(types);
     const eligiblePrinters = filterPrintersForUpload(printers, uploadSet);
@@ -825,7 +867,7 @@ document.addEventListener("DOMContentLoaded", () => {
       : groupEntries;
     sortedGroups.forEach((entry) => {
       const row = document.createElement("tr");
-      row.appendChild(document.createElement("td")).textContent = entry.name;
+      row.appendChild(createNameCell(entry));
       row.appendChild(createJobCell(entry.jobLabel));
       row.appendChild(document.createElement("td")).textContent = entry.elapsedDisplay;
       row.appendChild(document.createElement("td")).textContent = entry.remainingDisplay;

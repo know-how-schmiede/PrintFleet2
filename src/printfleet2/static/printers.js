@@ -190,6 +190,13 @@ document.addEventListener("DOMContentLoaded", () => {
     return value.trim().toLowerCase();
   }
 
+  function normalizeTypeValue(value) {
+    if (typeof value !== "string") {
+      return "";
+    }
+    return value.trim().toLowerCase();
+  }
+
   function hostSortKey(value) {
     if (value === null || value === undefined) {
       return "2-";
@@ -485,23 +492,35 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     const currentValue = selectedId !== undefined ? selectedId : groupSelect.value;
+    const selectedType = normalizeTypeValue(typeSelect ? typeSelect.value : "");
     groupSelect.innerHTML = "";
+    if (!selectedType) {
+      const placeholderOption = document.createElement("option");
+      placeholderOption.value = "";
+      placeholderOption.textContent = "Select printer type first";
+      groupSelect.appendChild(placeholderOption);
+      groupSelect.value = "";
+      groupSelect.disabled = true;
+      return;
+    }
+    groupSelect.disabled = false;
     const emptyOption = document.createElement("option");
     emptyOption.value = "";
     emptyOption.textContent = "No group";
     groupSelect.appendChild(emptyOption);
-    printerGroupsCache.forEach((group) => {
+    const filteredGroups = printerGroupsCache.filter((group) => {
+      const groupType = normalizeTypeValue(group && group.printer_type);
+      return groupType === selectedType;
+    });
+    filteredGroups.forEach((group) => {
       const option = document.createElement("option");
       option.value = String(group.id);
       option.textContent = group.name;
       groupSelect.appendChild(option);
     });
-    const normalized = currentValue !== null && currentValue !== undefined ? String(currentValue) : "";
-    if (normalized && !groupSelect.querySelector(`option[value="${normalized}"]`)) {
-      const option = document.createElement("option");
-      option.value = normalized;
-      option.textContent = `Unknown (${normalized})`;
-      groupSelect.appendChild(option);
+    let normalized = currentValue !== null && currentValue !== undefined ? String(currentValue) : "";
+    if (normalized && !filteredGroups.some((group) => String(group.id) === normalized)) {
+      normalized = "";
     }
     groupSelect.value = normalized;
   }
@@ -1219,6 +1238,12 @@ document.addEventListener("DOMContentLoaded", () => {
       renderPrinterTable(sortedPrinters(printersCache));
     });
   });
+
+  if (typeSelect && groupSelect) {
+    typeSelect.addEventListener("change", () => {
+      renderGroupOptions();
+    });
+  }
 
   loadPrinters();
   updateSortButtons();

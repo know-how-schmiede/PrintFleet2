@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const groupNotice = document.getElementById("printerGroupNotice");
   const groupIdField = document.getElementById("printerGroupId");
   const groupNameField = document.getElementById("printerGroupName");
+  const groupTypeField = document.getElementById("printerGroupType");
   const groupDescriptionField = document.getElementById("printerGroupDescription");
   const groupResetBtn = document.getElementById("printerGroupReset");
   const groupSubmitBtn = document.getElementById("printerGroupSubmit");
@@ -14,6 +15,8 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!groupForm || !groupNameField || !groupDescriptionField || !groupTable) {
     return;
   }
+
+  let printerTypesCache = [];
 
   function setGroupNotice(message, type) {
     if (!groupNotice) {
@@ -33,6 +36,63 @@ document.addEventListener("DOMContentLoaded", () => {
     return value.trim();
   }
 
+  function normalizeGroupType(value) {
+    if (typeof value !== "string") {
+      return "";
+    }
+    return value.trim();
+  }
+
+  function renderTypeOptions(selectedValue) {
+    if (!groupTypeField) {
+      return;
+    }
+    const currentValue =
+      selectedValue !== undefined ? selectedValue : groupTypeField.value;
+    groupTypeField.innerHTML = "";
+    const emptyOption = document.createElement("option");
+    emptyOption.value = "";
+    emptyOption.textContent = "No type";
+    groupTypeField.appendChild(emptyOption);
+    printerTypesCache.forEach((printerType) => {
+      const option = document.createElement("option");
+      option.value = printerType.name;
+      if (printerType.active === false) {
+        option.disabled = true;
+        option.textContent = `${printerType.name} (inactive)`;
+      } else {
+        option.textContent = printerType.name;
+      }
+      groupTypeField.appendChild(option);
+    });
+    const normalized =
+      currentValue !== null && currentValue !== undefined ? String(currentValue) : "";
+    if (normalized && !groupTypeField.querySelector(`option[value="${normalized}"]`)) {
+      const option = document.createElement("option");
+      option.value = normalized;
+      option.textContent = `${normalized} (missing)`;
+      groupTypeField.appendChild(option);
+    }
+    groupTypeField.value = normalized;
+  }
+
+  async function loadPrinterTypes(selectedValue) {
+    if (!groupTypeField) {
+      return;
+    }
+    try {
+      const res = await fetch("/api/printer-types");
+      if (!res.ok) {
+        throw new Error("types_failed");
+      }
+      const data = await res.json().catch(() => ({}));
+      printerTypesCache = Array.isArray(data.items) ? data.items : [];
+      renderTypeOptions(selectedValue);
+    } catch (error) {
+      // ignore type load failures
+    }
+  }
+
   function fillGroupForm(group) {
     if (!group) {
       return;
@@ -41,6 +101,13 @@ document.addEventListener("DOMContentLoaded", () => {
       groupIdField.value = group.id || "";
     }
     groupNameField.value = group.name || "";
+    if (groupTypeField) {
+      if (printerTypesCache.length) {
+        renderTypeOptions(group.printer_type || "");
+      } else {
+        loadPrinterTypes(group.printer_type || "");
+      }
+    }
     groupDescriptionField.value = group.description || "";
     if (groupSubmitBtn) {
       groupSubmitBtn.textContent = "Save group";
@@ -53,6 +120,13 @@ document.addEventListener("DOMContentLoaded", () => {
       groupIdField.value = "";
     }
     groupNameField.value = "";
+    if (groupTypeField) {
+      if (printerTypesCache.length) {
+        renderTypeOptions("");
+      } else {
+        loadPrinterTypes("");
+      }
+    }
     groupDescriptionField.value = "";
     if (groupSubmitBtn) {
       groupSubmitBtn.textContent = "Create group";
@@ -172,10 +246,14 @@ document.addEventListener("DOMContentLoaded", () => {
       setGroupNotice("Group name is required.", "error");
       return;
     }
+    const printerTypeValue = groupTypeField ? normalizeGroupType(groupTypeField.value) : "";
     const payload = {
       name,
       description: groupDescriptionField.value.trim() || null,
     };
+    if (groupTypeField) {
+      payload.printer_type = printerTypeValue || null;
+    }
     const groupId = groupIdField && groupIdField.value ? Number(groupIdField.value) : null;
     const method = groupId ? "PATCH" : "POST";
     const url = groupId ? `/api/printer-groups/${groupId}` : "/api/printer-groups";
@@ -286,4 +364,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
   clearGroupForm({ keepNotice: true });
   loadPrinterGroups();
+  loadPrinterTypes();
 });
