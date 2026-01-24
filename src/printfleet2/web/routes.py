@@ -83,6 +83,24 @@ _PENDING_UPLOADS: dict[int, list[dict]] = {}
 _PENDING_UPLOAD_TTL_SECONDS = 30 * 60
 
 
+def format_uptime_display(start_ts: float | None) -> str | None:
+    if start_ts is None:
+        return None
+    try:
+        start_value = float(start_ts)
+    except (TypeError, ValueError):
+        return None
+    if start_value <= 0:
+        return None
+    delta = int(time.time() - start_value)
+    if delta < 0:
+        delta = 0
+    days, remainder = divmod(delta, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{days:02d}:{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+
 def clean_text(value: object | None) -> str | None:
     if value is None:
         return None
@@ -571,12 +589,14 @@ def normalize_group_id(payload: dict, session) -> tuple[bool, int | None, dict |
 @bp.get("/")
 def index():
     with session_scope() as session:
+        settings = ensure_settings_row(session)
         printers = list_printers(session)
         enabled_printers = [printer for printer in printers if printer.enabled]
         snapshots = build_printer_snapshots(enabled_printers)
         active_printer_names = [printer.name for printer in enabled_printers]
         total_print_jobs_today = count_print_jobs_today(session)
         total_print_jobs_total = count_print_jobs(session)
+        uptime_display = format_uptime_display(settings.uptime_start_ts) or "--"
     status_map = collect_printer_statuses(snapshots, include_plug=False)
     active_prints = 0
     active_errors = 0
@@ -601,6 +621,7 @@ def index():
         "active_errors": active_errors,
         "total_print_jobs_today": total_print_jobs_today,
         "total_print_jobs_total": total_print_jobs_total,
+        "uptime_printfleet2": uptime_display,
     }
     return render_template(
         "index.html",
@@ -612,11 +633,13 @@ def index():
 @bp.get("/printer-dashboard")
 def printer_dashboard_page():
     with session_scope() as session:
+        settings = ensure_settings_row(session)
         printers = list_printers(session)
         enabled_printers = [printer for printer in printers if printer.enabled]
         snapshots = build_printer_snapshots(enabled_printers)
         total_print_jobs_today = count_print_jobs_today(session)
         total_print_jobs_total = count_print_jobs(session)
+        uptime_display = format_uptime_display(settings.uptime_start_ts) or "--"
     status_map = collect_printer_statuses(snapshots, include_plug=False)
     active_prints = 0
     active_errors = 0
@@ -641,6 +664,7 @@ def printer_dashboard_page():
         "active_errors": active_errors,
         "total_print_jobs_today": total_print_jobs_today,
         "total_print_jobs_total": total_print_jobs_total,
+        "uptime_printfleet2": uptime_display,
     }
     return render_template(
         "printer_dashboard.html",
@@ -651,11 +675,13 @@ def printer_dashboard_page():
 @bp.get("/printer-just")
 def printer_just_page():
     with session_scope() as session:
+        settings = ensure_settings_row(session)
         printers = list_printers(session)
         enabled_printers = [printer for printer in printers if printer.enabled]
         snapshots = build_printer_snapshots(enabled_printers)
         total_print_jobs_today = count_print_jobs_today(session)
         total_print_jobs_total = count_print_jobs(session)
+        uptime_display = format_uptime_display(settings.uptime_start_ts) or "--"
     status_map = collect_printer_statuses(snapshots, include_plug=False)
     active_prints = 0
     active_errors = 0
@@ -681,6 +707,7 @@ def printer_just_page():
         "active_errors": active_errors,
         "total_print_jobs_today": total_print_jobs_today,
         "total_print_jobs_total": total_print_jobs_total,
+        "uptime_printfleet2": uptime_display,
     }
     return render_template(
         "printer_just.html",
@@ -691,11 +718,13 @@ def printer_just_page():
 @bp.get("/printer-group-just")
 def printer_group_just_page():
     with session_scope() as session:
+        settings = ensure_settings_row(session)
         printers = list_printers(session)
         enabled_printers = [printer for printer in printers if printer.enabled]
         snapshots = build_printer_snapshots(enabled_printers)
         total_print_jobs_today = count_print_jobs_today(session)
         total_print_jobs_total = count_print_jobs(session)
+        uptime_display = format_uptime_display(settings.uptime_start_ts) or "--"
     status_map = collect_printer_statuses(snapshots, include_plug=False)
     active_prints = 0
     active_errors = 0
@@ -721,6 +750,7 @@ def printer_group_just_page():
         "active_errors": active_errors,
         "total_print_jobs_today": total_print_jobs_today,
         "total_print_jobs_total": total_print_jobs_total,
+        "uptime_printfleet2": uptime_display,
     }
     return render_template(
         "printer_group_just.html",
@@ -1067,11 +1097,13 @@ def delete_printer_type(type_id: int):
 @bp.get("/api/live-wall/status")
 def live_wall_status():
     with session_scope() as session:
+        settings = ensure_settings_row(session)
         printers = list_printers(session)
         enabled_printers = [printer for printer in printers if printer.enabled]
         snapshots = build_printer_snapshots(enabled_printers)
         total_printers = len(printers)
         name_map = {printer.id: printer.name for printer in enabled_printers}
+        uptime_display = format_uptime_display(settings.uptime_start_ts) or "--"
     status_map = collect_printer_statuses(snapshots, include_plug=False)
     items = []
     total_print_time_today_seconds = 0.0
@@ -1152,6 +1184,7 @@ def live_wall_status():
         "total_print_time_total_seconds": total_print_time_total_seconds,
         "total_print_jobs_today": total_print_jobs_today,
         "total_print_jobs_total": total_print_jobs_total,
+        "uptime_printfleet2": uptime_display,
     }
 
 

@@ -22,6 +22,8 @@ def ensure_settings_schema(session: Session) -> None:
         missing["filename_display_length"] = "INTEGER"
     if "upload_timeout" not in columns:
         missing["upload_timeout"] = "INTEGER"
+    if "uptime_start_ts" not in columns:
+        missing["uptime_start_ts"] = "REAL"
     if "kiosk_stream_active_1" not in columns:
         missing["kiosk_stream_active_1"] = "INTEGER DEFAULT 1"
     if "kiosk_stream_active_2" not in columns:

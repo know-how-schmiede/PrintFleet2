@@ -13,6 +13,10 @@
       <div class="hero-card reveal" style="animation-delay: 0.1s">
         <h3>Live snapshot</h3>
         <div class="metric">
+          <span class="metric-label">Uptime PrintFleet2</span>
+          <span class="metric-value" id="uptimePrintFleet2">{{ snapshot.uptime_printfleet2 if snapshot else "--" }}</span>
+        </div>
+        <div class="metric">
           <span class="metric-label">Printers</span>
           <span class="metric-value" id="printerCount">{{ snapshot.total_printers if snapshot else "--" }}</span>
         </div>

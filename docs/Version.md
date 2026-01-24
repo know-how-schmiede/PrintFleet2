@@ -1,5 +1,9 @@
 # PrintFleet2 Versions
 
+## 0.8.4 - 2026-1-24
+
+- Uptime in Liveshapshots
+
 ## 0.8.3 - 2026-1-24
 
 - Fix: keine Zeit-Anzeige bei Just Group Print, wenn mehrere Drucker in Gruppe

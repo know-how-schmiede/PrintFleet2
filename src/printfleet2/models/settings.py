@@ -15,6 +15,7 @@ class Settings(Base):
     db_reload_interval: Mapped[float | None] = mapped_column(Float, nullable=True)
     filename_display_length: Mapped[int | None] = mapped_column(Integer, nullable=True)
     upload_timeout: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    uptime_start_ts: Mapped[float | None] = mapped_column(Float, nullable=True)
     telegram_chat_id: Mapped[str | None] = mapped_column(String, nullable=True)
     language: Mapped[str | None] = mapped_column(String, nullable=True)
     theme: Mapped[str | None] = mapped_column(String, nullable=True)

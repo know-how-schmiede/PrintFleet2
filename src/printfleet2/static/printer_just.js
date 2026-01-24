@@ -866,6 +866,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (printJobsTotalEl) {
       printJobsTotalEl.textContent = Number.isFinite(jobsTotal) ? jobsTotal : "--";
     }
+    const uptimeEl = document.getElementById("uptimePrintFleet2");
+    if (uptimeEl) {
+      const uptimeValue = statusData && typeof statusData.uptime_printfleet2 === "string"
+        ? statusData.uptime_printfleet2
+        : "--";
+      uptimeEl.textContent = uptimeValue || "--";
+    }
 
     const energyItems = energyData && Array.isArray(energyData.items) ? energyData.items : [];
     let totalPower = 0;

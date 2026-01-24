@@ -1,3 +1,5 @@
+import time
+
 from flask import Flask, g, jsonify, redirect, request, session as flask_session, url_for
 
 from printfleet2.config import load_config
@@ -20,7 +22,8 @@ def create_app() -> Flask:
     init_engine(cfg.database_url)
     try:
         with session_scope() as session:
-            ensure_settings_row(session)
+            settings = ensure_settings_row(session)
+            settings.uptime_start_ts = time.time()
     except Exception as exc:
         app.logger.warning("Settings initialization skipped: %s", exc)
 
