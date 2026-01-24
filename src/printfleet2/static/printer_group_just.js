@@ -145,6 +145,13 @@ document.addEventListener("DOMContentLoaded", () => {
     return `${secs}s`;
   }
 
+  function wrapEstimatedDuration(value, useParens) {
+    if (!useParens || value === "--") {
+      return value;
+    }
+    return `(${value})`;
+  }
+
   function normalizeBackend(value) {
     if (typeof value !== "string") {
       return "";
@@ -401,9 +408,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let elapsedSeconds = NaN;
     let remainingSeconds = NaN;
-    if (printingStatuses.length === 1) {
-      elapsedSeconds = Number(printingStatuses[0].elapsed);
-      remainingSeconds = Number(printingStatuses[0].remaining);
+    let wrapEstimate = false;
+    if (printingStatuses.length >= 1) {
+      const representative =
+        printingStatuses.find(
+          (status) =>
+            Number.isFinite(Number(status && status.elapsed)) ||
+            Number.isFinite(Number(status && status.remaining))
+        ) || printingStatuses[0];
+      elapsedSeconds = Number(representative.elapsed);
+      remainingSeconds = Number(representative.remaining);
+      wrapEstimate = printingStatuses.length > 1;
     }
 
     return {
@@ -411,8 +426,8 @@ document.addEventListener("DOMContentLoaded", () => {
       jobSort: normalizeSortKey(jobLabel),
       elapsedSeconds,
       remainingSeconds,
-      elapsedDisplay: formatDuration(elapsedSeconds),
-      remainingDisplay: formatDuration(remainingSeconds),
+      elapsedDisplay: wrapEstimatedDuration(formatDuration(elapsedSeconds), wrapEstimate),
+      remainingDisplay: wrapEstimatedDuration(formatDuration(remainingSeconds), wrapEstimate),
     };
   }
 

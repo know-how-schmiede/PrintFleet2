@@ -2,14 +2,26 @@ document.addEventListener("DOMContentLoaded", () => {
   const tableBody = document.getElementById("logTable");
   const notice = document.getElementById("logNotice");
   const refreshBtn = document.getElementById("logRefresh");
+  const exportBtn = document.getElementById("logExport");
   const startInput = document.getElementById("logStartDate");
   const endInput = document.getElementById("logEndDate");
   const rangeSelect = document.getElementById("logRange");
+  const limitSelect = document.getElementById("logLimit");
   const clearBtn = document.getElementById("logClear");
+  const pagePrevBtn = document.getElementById("logPagePrev");
+  const pageNextBtn = document.getElementById("logPageNext");
+  const pageInfo = document.getElementById("logPageInfo");
+  const paginationWrap = document.getElementById("logPagination");
 
   if (!tableBody) {
     return;
   }
+
+  const allowedPageSizes = new Set([5, 25, 50, 100, 250, 500]);
+  let pageSize = normalizePageSize(limitSelect ? limitSelect.value : 25);
+  let currentPage = 1;
+  let cachedItems = [];
+  let isFiltered = false;
 
   function setNotice(message, type) {
     if (!notice) {
@@ -20,6 +32,72 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!message) {
       notice.className = "notice";
     }
+  }
+
+  function normalizePageSize(value) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      return 25;
+    }
+    if (!allowedPageSizes.has(parsed)) {
+      return 25;
+    }
+    return parsed;
+  }
+
+  function getDateFilters() {
+    const startDate = startInput ? startInput.value : "";
+    const endDate = endInput ? endInput.value : "";
+    if (startDate && endDate && startDate > endDate) {
+      setNotice("Start date must be before end date.", "error");
+      return null;
+    }
+    return { startDate, endDate };
+  }
+
+  function buildLogQuery({ startDate, endDate }) {
+    const params = new URLSearchParams();
+    if (startDate) {
+      params.set("start_date", startDate);
+    }
+    if (endDate) {
+      params.set("end_date", endDate);
+    }
+    return params.toString();
+  }
+
+  function buildExportFileName(startDate, endDate) {
+    const parts = ["print_jobs"];
+    if (startDate) {
+      parts.push(startDate);
+    }
+    if (endDate) {
+      parts.push(endDate);
+    }
+    return `${parts.join("_")}.csv`;
+  }
+
+  function getResponseFilename(response, fallback) {
+    const header = response.headers.get("content-disposition");
+    if (!header) {
+      return fallback;
+    }
+    const match = header.match(/filename="?([^\";]+)"?/i);
+    if (!match) {
+      return fallback;
+    }
+    return match[1];
+  }
+
+  function downloadBlob(filename, blob) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   }
 
   function renderRows(items, filtered) {
@@ -50,6 +128,54 @@ document.addEventListener("DOMContentLoaded", () => {
       row.appendChild(viaCell);
       tableBody.appendChild(row);
     });
+  }
+
+  function getTotalPages(total) {
+    if (!total) {
+      return 1;
+    }
+    return Math.max(1, Math.ceil(total / pageSize));
+  }
+
+  function updatePagination(total, startIndex, endIndex) {
+    if (!paginationWrap) {
+      return;
+    }
+    if (!total || total <= pageSize) {
+      paginationWrap.hidden = true;
+      if (pageInfo) {
+        pageInfo.textContent = "";
+      }
+      return;
+    }
+    const totalPages = getTotalPages(total);
+    paginationWrap.hidden = false;
+    if (pageInfo) {
+      pageInfo.textContent = `${startIndex + 1}-${endIndex} of ${total}`;
+    }
+    if (pagePrevBtn) {
+      pagePrevBtn.disabled = currentPage <= 1;
+    }
+    if (pageNextBtn) {
+      pageNextBtn.disabled = currentPage >= totalPages;
+    }
+  }
+
+  function renderCurrentPage() {
+    const total = cachedItems.length;
+    if (!total) {
+      renderRows([], isFiltered);
+      updatePagination(0, 0, 0);
+      return;
+    }
+    const totalPages = getTotalPages(total);
+    if (currentPage > totalPages) {
+      currentPage = totalPages;
+    }
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, total);
+    renderRows(cachedItems.slice(startIndex, endIndex), isFiltered);
+    updatePagination(total, startIndex, endIndex);
   }
 
   function formatDate(value) {
@@ -93,32 +219,54 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function loadLogs() {
     setNotice("", "");
-    const startDate = startInput ? startInput.value : "";
-    const endDate = endInput ? endInput.value : "";
-    if (startDate && endDate && startDate > endDate) {
-      setNotice("Start date must be before end date.", "error");
+    const filters = getDateFilters();
+    if (!filters) {
       return;
     }
-    const params = new URLSearchParams();
-    if (startDate) {
-      params.set("start_date", startDate);
-    }
-    if (endDate) {
-      params.set("end_date", endDate);
-    }
-    const url = params.toString() ? `/api/print-jobs?${params.toString()}` : "/api/print-jobs";
+    const query = buildLogQuery(filters);
+    const url = query ? `/api/print-jobs?${query}` : "/api/print-jobs";
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) {
       setNotice("Failed to load logs.", "error");
       return;
     }
     const data = await res.json().catch(() => ({}));
-    const items = Array.isArray(data.items) ? data.items : [];
-    renderRows(items, Boolean(startDate || endDate));
+    cachedItems = Array.isArray(data.items) ? data.items : [];
+    isFiltered = Boolean(filters.startDate || filters.endDate);
+    currentPage = 1;
+    renderCurrentPage();
   }
 
   if (refreshBtn) {
     refreshBtn.addEventListener("click", loadLogs);
+  }
+  if (exportBtn) {
+    exportBtn.addEventListener("click", async () => {
+      setNotice("", "");
+      const filters = getDateFilters();
+      if (!filters) {
+        return;
+      }
+      exportBtn.disabled = true;
+      setNotice("Preparing export...", "success");
+      try {
+        const query = buildLogQuery(filters);
+        const url = query ? `/api/print-jobs/export?${query}` : "/api/print-jobs/export";
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) {
+          throw new Error("export_failed");
+        }
+        const blob = await res.blob();
+        const fallbackName = buildExportFileName(filters.startDate, filters.endDate);
+        const filename = getResponseFilename(res, fallbackName);
+        downloadBlob(filename, blob);
+        setNotice("Export ready.", "success");
+      } catch (error) {
+        setNotice("Failed to export logs.", "error");
+      } finally {
+        exportBtn.disabled = false;
+      }
+    });
   }
   if (rangeSelect) {
     rangeSelect.addEventListener("change", () => {
@@ -127,6 +275,13 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       applyPreset(rangeSelect.value);
       loadLogs();
+    });
+  }
+  if (limitSelect) {
+    limitSelect.addEventListener("change", () => {
+      pageSize = normalizePageSize(limitSelect.value);
+      currentPage = 1;
+      renderCurrentPage();
     });
   }
   if (startInput) {
@@ -157,6 +312,25 @@ document.addEventListener("DOMContentLoaded", () => {
         endInput.value = "";
       }
       loadLogs();
+    });
+  }
+  if (pagePrevBtn) {
+    pagePrevBtn.addEventListener("click", () => {
+      if (currentPage <= 1) {
+        return;
+      }
+      currentPage -= 1;
+      renderCurrentPage();
+    });
+  }
+  if (pageNextBtn) {
+    pageNextBtn.addEventListener("click", () => {
+      const totalPages = getTotalPages(cachedItems.length);
+      if (currentPage >= totalPages) {
+        return;
+      }
+      currentPage += 1;
+      renderCurrentPage();
     });
   }
 

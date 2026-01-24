@@ -1,3 +1,5 @@
+import csv
+import io
 import os
 import shutil
 import subprocess
@@ -1214,6 +1216,47 @@ def get_print_jobs():
     with session_scope() as session:
         jobs = list_print_jobs(session, start_date=start_date, end_date=end_date)
         return {"items": [print_job_to_dict(job) for job in jobs]}
+
+
+@bp.get("/api/print-jobs/export")
+def export_print_jobs():
+    start_value = clean_optional(request.args.get("start_date"))
+    end_value = clean_optional(request.args.get("end_date"))
+    start_date = parse_iso_date(start_value) if start_value else None
+    end_date = parse_iso_date(end_value) if end_value else None
+    if (start_value and start_date is None) or (end_value and end_date is None):
+        return {"error": "invalid_date"}, 400
+    if start_date and end_date and start_date > end_date:
+        return {"error": "invalid_date_range"}, 400
+    with session_scope() as session:
+        jobs = list_print_jobs(session, limit=None, start_date=start_date, end_date=end_date)
+        job_items = [print_job_to_dict(job) for job in jobs]
+
+    output = io.StringIO(newline="")
+    writer = csv.writer(output, lineterminator="\n")
+    writer.writerow(["Date", "G-Code file", "Printer", "User", "Print via"])
+    for job in job_items:
+        writer.writerow(
+            [
+                job.get("job_date") or "",
+                job.get("gcode_filename") or "",
+                job.get("printer_name") or "",
+                job.get("username") or "",
+                job.get("print_via") or "",
+            ]
+        )
+
+    filename = "print_jobs.csv"
+    if start_value or end_value:
+        parts = ["print_jobs"]
+        if start_value:
+            parts.append(start_value)
+        if end_value:
+            parts.append(end_value)
+        filename = "_".join(parts) + ".csv"
+    response = Response(output.getvalue(), mimetype="text/csv; charset=utf-8")
+    response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
 
 
 @bp.get("/api/printers/<int:printer_id>")

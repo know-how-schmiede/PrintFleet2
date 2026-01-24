@@ -13,7 +13,7 @@
     <div class="card">
       <div class="table-header">
         <h3>Print jobs</h3>
-        <div class="table-actions">
+        <div class="table-actions log-controls">
           <div class="log-filters">
             <label class="log-filter">
               Date range
@@ -33,9 +33,23 @@
               End date
               <input type="date" id="logEndDate" />
             </label>
-            <button class="btn small" id="logClear" type="button">Clear</button>
+            <label class="log-filter">
+              Entries
+              <select id="logLimit" class="log-limit">
+                <option value="5">5</option>
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="250">250</option>
+                <option value="500">500</option>
+              </select>
+            </label>
           </div>
-          <button class="btn soft" id="logRefresh" type="button">Refresh</button>
+          <div class="log-actions">
+            <button class="btn small log-action" id="logClear" type="button">Clear</button>
+            <button class="btn soft small log-action" id="logRefresh" type="button">Refresh</button>
+            <button class="btn soft small log-action" id="logExport" type="button">Export CSV</button>
+          </div>
         </div>
       </div>
       <div id="logNotice" class="notice"></div>
@@ -56,6 +70,11 @@
             </tr>
           </tbody>
         </table>
+      </div>
+      <div class="log-pagination" id="logPagination" hidden>
+        <button class="btn small" id="logPagePrev" type="button">Previous</button>
+        <span class="muted" id="logPageInfo"></span>
+        <button class="btn small" id="logPageNext" type="button">Next</button>
       </div>
     </div>
   </section>

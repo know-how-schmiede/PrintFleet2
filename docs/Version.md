@@ -1,5 +1,12 @@
 # PrintFleet2 Versions
 
+## 0.8.3 - 2026-1-24
+
+- Fix: keine Zeit-Anzeige bei Just Group Print, wenn mehrere Drucker in Gruppe
+- Blätternfunktion bei Log Print jobs
+- Export Log Print Jobs als CSV
+- Buttons auf Logs-Seite, Design Anpassung
+
 ## 0.8.2 - 2026-1-22
 
 - Statusmeldungen Just Group Printing

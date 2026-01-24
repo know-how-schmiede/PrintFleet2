@@ -115,7 +115,7 @@ def _apply_date_filters(query, start_date: date | None, end_date: date | None):
 
 def list_print_jobs(
     session: Session,
-    limit: int = 200,
+    limit: int | None = 200,
     start_date: date | None = None,
     end_date: date | None = None,
 ) -> list[PrintJob]:
@@ -129,7 +129,10 @@ def list_print_jobs(
         query = session.query(PrintJob)
         if start_date or end_date:
             query = _apply_date_filters(query, start_date, end_date)
-        return query.order_by(PrintJob.id.desc()).limit(limit).all()
+        query = query.order_by(PrintJob.id.desc())
+        if limit is None:
+            return query.all()
+        return query.limit(limit).all()
     except Exception:
         return []
 
